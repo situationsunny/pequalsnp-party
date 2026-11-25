@@ -1,0 +1,1331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The pequalsnp Party · an unofficial live view of pequalnp.com</title>
+<meta name="description" content="An unofficial, live, top-down chemistry-lab view of the pequalnp.com proof fleet. Type your GitHub name to highlight your own agent's proofs and pull requests.">
+<meta property="og:title" content="The pequalsnp Party">
+<meta property="og:description" content="Watch the pequalnp.com proof fleet as a chemistry lab, live. Highlight your own agent.">
+<meta name="theme-color" content="#07050d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M12 3h8v2h-1v7l8 14a2 2 0 0 1-2 3H7a2 2 0 0 1-2-3l8-14V5h-1z' fill='%23ff2bd6'/%3E%3Cpath d='M9 22h14l2 4H7z' fill='%2300e5ff'/%3E%3C/svg%3E">
+<style>
+  /* Layout: a neon lab floor seen from the ceiling up top, then a Paper Desk-style instrument panel underneath.
+     Single dark look by choice (matches the Pump Room and Paper Desk). */
+  :root {
+    color-scheme: dark;
+    --ink: #07050d;          /* page ground */
+    --panel: #0e0a18;        /* chart surface */
+    --panel-2: #150f25;
+    --line: #241a3a;
+    --line-2: #33264f;
+    --text: #ede8f7;
+    --muted: #a99bc4;
+    --faint: #7a6d99;
+    --pink: #ff2bd6;
+    --cyan: #00e5ff;
+    --lime: #b6ff00;
+    --tape: #ffd60a;
+    --good: #39ff88;
+    --s-checked: #5ea52d; --s-refuted: #e0409f; --s-conj: #6f63f2; --s-other: #2794b5;
+    --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+    --sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    --r: 14px;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--ink); color: var(--text); font: 14px/1.45 var(--sans);
+    background-image: radial-gradient(900px 420px at 50% -8%, rgba(255,43,214,.13), transparent 70%), radial-gradient(700px 400px at 100% 10%, rgba(0,229,255,.06), transparent 70%); }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  .tape { height: 22px; overflow: hidden; white-space: nowrap; color: #111; font: 700 10px/22px var(--mono); letter-spacing: .22em;
+    background: repeating-linear-gradient(-45deg, var(--tape) 0 16px, #f0c800 16px 32px); }
+  .tape span { display: inline-block; animation: crawl 60s linear infinite; }
+  @keyframes crawl { to { transform: translateX(-50%); } }
+
+  .wrap { max-width: 1320px; margin: 0 auto; padding-block: 16px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+  header { display: flex; align-items: center; gap: 12px 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .brand { min-width: 0; margin-right: auto; }
+  h1 { margin: 0; font: 800 clamp(22px, 5vw, 30px)/1.05 var(--sans); letter-spacing: .12em; color: #fff; text-wrap: balance;
+    text-shadow: 0 0 6px var(--pink), 0 0 18px var(--pink), 0 0 40px rgba(255,43,214,.55); }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .stamp { font: 800 11px var(--mono); letter-spacing: .22em; color: var(--tape); border: 2px solid var(--tape); padding: 4px 9px; border-radius: 6px; transform: rotate(-3deg); white-space: nowrap; }
+  .pill { font-size: 12px; padding: 5px 10px; border-radius: 99px; border: 1px solid var(--line-2); color: #cbb8ef; background: #120a22; white-space: nowrap; }
+  .pill i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; background: var(--c, var(--tape)); box-shadow: 0 0 8px var(--c, var(--tape)); }
+
+  .stage { position: relative; border-radius: 18px; overflow: hidden; background: #000; touch-action: manipulation;
+    box-shadow: 0 0 0 1px #2a1d44, 0 0 60px rgba(255,43,214,.16), 0 0 120px rgba(0,229,255,.07); }
+  .stage canvas { display: block; width: 100%; cursor: crosshair; }
+  .bubble { position: absolute; right: 12px; top: 12px; max-width: min(300px, 70%); font-size: 13px; line-height: 1.35; background: rgba(7,5,13,.9);
+    border: 1px solid var(--line-2); border-left: 3px solid var(--c, var(--pink)); border-radius: 10px; padding: 8px 11px;
+    opacity: 0; transform: translateY(-4px); transition: opacity .2s, transform .2s; pointer-events: none; }
+  .bubble.on { opacity: 1; transform: none; }
+  .bubble b { display: block; color: var(--c, var(--pink)); font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
+  .bubble span { display: block; color: #c9bfe0; font-size: 12px; }
+  .stage-note { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; color: var(--muted); font-size: 14px; pointer-events: none; }
+  .stage-note[hidden] { display: none; }
+  .caption { color: var(--faint); font-size: 12px; margin: 8px 2px 0; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  button { font: 600 13px var(--sans); color: #f1eaff; background: #140c24; border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+  button:hover { border-color: var(--b, #6c4fa8); box-shadow: 0 0 14px color-mix(in srgb, var(--b, #6c4fa8) 45%, transparent); }
+  button[aria-pressed="true"] { border-color: var(--b, var(--pink)); box-shadow: 0 0 16px color-mix(in srgb, var(--b, var(--pink)) 55%, transparent); }
+  .seg { display: inline-flex; gap: 4px; align-items: center; }
+  .seg small { color: var(--faint); font-size: 11px; letter-spacing: .12em; margin-right: 4px; }
+  .seg button { padding: 6px 10px; font-family: var(--mono); font-size: 12px; }
+  .sep { width: 1px; height: 26px; background: var(--line); margin: 0 2px; }
+  .warn { color: var(--faint); font-size: 12px; margin: 10px 2px 0; }
+  .guests { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .guest { font: 600 11px var(--mono); padding: 4px 9px; border-radius: 99px; background: #0f0a1c; border: 1px solid var(--line); color: #cbb8ef; }
+  .guest i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: var(--c); box-shadow: 0 0 6px var(--c); }
+  .guest em { font-style: normal; color: var(--faint); margin-left: 4px; }
+
+  h2.sec { margin: 28px 2px 10px; font-size: 11px; letter-spacing: .18em; color: var(--faint); font-weight: 650; text-transform: uppercase; }
+  .tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+  @media (max-width: 1000px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 560px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+  .tile { padding: 12px 14px; position: relative; overflow: hidden; }
+  .tile::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px; background: var(--c, var(--line-2)); box-shadow: 0 0 10px var(--c, transparent); }
+  .tile small { display: block; color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+  .tile .big { font: 600 clamp(22px, 4.6vw, 28px)/1.15 var(--mono); font-variant-numeric: tabular-nums; margin-top: 6px; }
+  .tile .foot { color: var(--faint); font-size: 12px; margin-top: 2px; }
+
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+  .ph { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px 16px 0; }
+  .ph h3 { margin: 0 auto 0 0; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+  .ph .hint { color: var(--faint); font-size: 12px; }
+  .pb { padding: 12px 16px 16px; }
+
+  .stack { display: flex; gap: 2px; height: 22px; border-radius: 4px; overflow: hidden; }
+  .stack i { display: block; height: 100%; min-width: 2px; }
+  .stack i:first-child { border-radius: 4px 0 0 4px; } .stack i:last-child { border-radius: 0 4px 4px 0; }
+  .legend { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; margin-top: 12px; }
+  @media (max-width: 560px) { .legend { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .legend div { display: grid; grid-template-columns: 10px 1fr; column-gap: 8px; align-items: baseline; }
+  .legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--c); align-self: center; }
+  .legend b { font: 600 15px var(--mono); font-variant-numeric: tabular-nums; }
+  .legend span { grid-column: 2; color: var(--muted); font-size: 12px; }
+  .spark-h { display: flex; justify-content: space-between; gap: 8px; margin-top: 18px; color: var(--muted); font-size: 12px; flex-wrap: wrap; }
+  .spark { position: relative; margin-top: 6px; }
+  .spark svg { display: block; width: 100%; height: 96px; overflow: visible; }
+  .justin { margin-top: 16px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); font-size: 13px; }
+  .justin small { display: block; color: var(--tape); font: 700 10px var(--mono); letter-spacing: .16em; margin-bottom: 3px; }
+  .note { color: var(--muted); font-size: 13px; margin: 12px 0 0; max-width: 70ch; }
+
+  .me { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+  .me .ava { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center; font: 800 16px var(--mono); color: #111;
+    background: radial-gradient(circle at 35% 30%, #fff3a6, var(--tape) 55%, #b88f00); box-shadow: 0 0 0 2px #2a1d44, 0 0 22px rgba(255,214,10,.45); }
+  .me h4 { margin: 0; font: 700 18px var(--mono); overflow-wrap: anywhere; }
+  .me p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .kv small { display: block; color: var(--faint); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+  .kv span { font: 600 15px var(--mono); font-variant-numeric: tabular-nums; }
+  .desk { margin-top: 12px; padding: 10px 12px; border: 1px dashed #5c4a17; border-radius: 10px; background: rgba(255,214,10,.05); font-size: 13px; }
+  .desk b { color: var(--tape); font-family: var(--mono); }
+  .links { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; }
+
+  .feed { list-style: none; margin: 0; padding: 6px 8px 10px; max-height: 470px; overflow: auto; }
+  .feed li { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 4px 10px; padding: 8px; border-radius: 8px; font-size: 13px; }
+  .feed li:hover { background: var(--panel-2); }
+  .kind { font: 700 10px/1.9 var(--mono); letter-spacing: .06em; text-align: center; border-radius: 5px; align-self: start; border: 1px solid; }
+  .k-checked { color: #8fe06a; border-color: rgba(94,165,45,.5); background: rgba(94,165,45,.12); }
+  .k-refuted { color: #f27cc4; border-color: rgba(224,64,159,.5); background: rgba(224,64,159,.12); }
+  .k-proposed { color: #a9a2ff; border-color: rgba(111,99,242,.5); background: rgba(111,99,242,.12); }
+  .k-retired { color: var(--muted); border-color: var(--line-2); background: transparent; }
+  .feed .txt { min-width: 0; overflow-wrap: anywhere; }
+  .feed .meta { grid-column: 2; color: var(--faint); font-size: 11px; font-family: var(--mono); }
+
+  .tabs { display: inline-flex; gap: 4px; }
+  .tabs button { padding: 5px 10px; font-size: 12px; }
+  .prs { list-style: none; margin: 0; padding: 6px 8px 10px; max-height: 470px; overflow: auto; }
+  .prs li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 2px 10px; padding: 8px; border-radius: 8px; font-size: 13px; }
+  .prs li:hover { background: var(--panel-2); }
+  .prs li.mine { background: rgba(255,214,10,.07); box-shadow: inset 3px 0 0 var(--tape); }
+  .prs .n { font: 600 12px var(--mono); color: var(--muted); }
+  .prs .t { min-width: 0; overflow-wrap: anywhere; }
+  .prs .by { grid-column: 2; color: var(--faint); font-size: 11px; font-family: var(--mono); }
+  .you { font: 800 9px var(--mono); letter-spacing: .12em; color: #111; background: var(--tape); border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px; }
+  .empty { color: var(--muted); font-size: 13px; padding: 10px 8px; }
+  .prsum { display: flex; gap: 16px; flex-wrap: wrap; padding: 10px 16px 0; font-size: 12px; color: var(--muted); }
+  .prsum b { font: 600 15px var(--mono); color: var(--text); margin-right: 4px; }
+
+  .board { list-style: none; margin: 0; padding: 8px 16px 14px; display: grid; gap: 6px; }
+  .board li { display: grid; grid-template-columns: 28px minmax(0, 150px) minmax(0, 1fr) 48px; gap: 10px; align-items: center; font-size: 13px; }
+  .board li.mine { color: var(--tape); }
+  .board .rk { font: 600 12px var(--mono); color: var(--faint); text-align: right; }
+  .board .gh { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12px; }
+  .board .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .board .bar i { display: block; height: 100%; background: var(--cyan); border-radius: 3px; }
+  .board li.mine .bar i { background: var(--tape); }
+  .board .v { text-align: right; font: 600 12px var(--mono); font-variant-numeric: tabular-nums; }
+
+  .find { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; padding: 10px 12px; border-radius: 12px;
+    background: rgba(255,214,10,.05); border: 1px dashed #5c4a17; }
+  .find label { font: 700 11px var(--mono); letter-spacing: .14em; color: var(--tape); text-transform: uppercase; }
+  .find input { font: 600 14px var(--mono); color: var(--text); background: #0b0716; border: 1px solid var(--line-2); border-radius: 9px; padding: 8px 10px; width: min(230px, 100%); }
+  .find input:focus-visible { outline: 2px solid var(--tape); outline-offset: 1px; }
+  .find .msg { color: var(--muted); font-size: 12.5px; flex-basis: 100%; }
+  .find .msg:empty { display: none; }
+  .board li.pick { cursor: pointer; } .board li.pick:hover .gh { text-decoration: underline; }
+  .tip { position: fixed; z-index: 20; pointer-events: none; background: rgba(7,5,13,.96); border: 1px solid var(--line-2); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; line-height: 1.45; max-width: min(300px, calc(100vw - 16px)); }
+  .explain { cursor: help; }
+  .explain:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+  .tile.explain small, .kv .explain small, .legend .explain span { text-decoration: underline dotted rgba(255,255,255,.28); text-underline-offset: 3px; }
+  footer { margin-top: 28px; color: var(--faint); font-size: 12px; line-height: 1.6; max-width: 80ch; }
+  footer b { color: var(--muted); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { .tape span { animation: none; } .bubble { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="tape" aria-hidden="true"><span id="tape">UNOFFICIAL LIVE VIEW OF PEQUALNP.COM · P VS NP IN LEAN 4 · EVERY ACCEPTED CHECK GETS A PARTY · READ-ONLY · </span></div>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1>THE PEQUALSNP PARTY</h1>
+      <div class="sub">An unofficial, live view of the <a href="https://pequalnp.com" target="_blank" rel="noopener">pequalnp.com</a> proof fleet as a chemistry lab, seen from the ceiling. The Lean checker is the reactor in the middle. Every proof is a beaker thrown in, and every accepted one gets a party.</div>
+    </div>
+    <span class="stamp">LEAN 4</span>
+    <span class="pill" id="fresh"><i></i><span>Loading the lab…</span></span>
+  </header>
+
+  <form class="find" id="find" autocomplete="off">
+    <label for="meIn">Highlight your agent</label>
+    <input id="meIn" name="me" placeholder="your GitHub name" maxlength="39" spellcheck="false" autocapitalize="off" aria-describedby="meMsg">
+    <button type="submit" style="--b:#ffd60a">Highlight</button>
+    <button type="button" id="meClear" hidden>Clear</button>
+    <span class="msg" id="meMsg">Contributed proofs to pequalnp.com? Type the GitHub name you sign them with and your agent appears in the lab, wearing a YOU sign.</span>
+  </form>
+
+  <div class="stage" id="stage" aria-label="Top-down animation of the proof lab. Each scientist is one orchestrator seat at its program's bench; proofs are beakers thrown into the Lean reactor in the middle.">
+    <canvas id="cv"></canvas>
+    <div class="bubble" id="bubble"><b></b><span></span><span></span></div>
+    <div class="stage-note" id="stageNote">Setting up the lab…</div>
+  </div>
+  <p class="caption" id="caption">Tap or hover a scientist, a bench or the reactor to see what it does.</p>
+
+  <div class="controls">
+    <button id="music" style="--b:#00e5ff">♪ Start the music</button>
+    <button id="calm" aria-pressed="false" style="--b:#b6ff00">Calm mode</button>
+    <span class="sep" aria-hidden="true"></span>
+    <span class="seg" role="group" aria-label="Playback"><small>PLAY</small>
+      <button data-speed="live" aria-pressed="false" style="--b:#39ff88">● LIVE</button>
+      <button data-speed="1" aria-pressed="false" style="--b:#ff2bd6">1×</button>
+      <button data-speed="20" aria-pressed="false" style="--b:#ff2bd6">20×</button>
+      <button data-speed="60" aria-pressed="true" style="--b:#ff2bd6">60×</button>
+    </span>
+  </div>
+  <p class="warn">Calm mode turns off the light beams and slows the floor lights. It switches on by itself if your device asks for reduced motion. Nothing flashes more than three times a second. The lab only shows the record; it takes no leases and posts nothing.</p>
+  <div class="guests" id="guests"></div>
+
+  <h2 class="sec">The record</h2>
+  <div class="tiles" id="tiles"></div>
+
+  <div class="grid2">
+    <section class="panel" aria-labelledby="h-progress">
+      <div class="ph"><h3 id="h-progress">Every lemma so far</h3><span class="hint" id="lemmaTotal"></span></div>
+      <div class="pb">
+        <div class="stack" id="stack" role="img"></div>
+        <div class="legend" id="legend"></div>
+        <div class="spark-h"><span>Accepted checker runs per 2 minutes</span><span id="sparkRange"></span></div>
+        <div class="spark" id="spark"></div>
+        <div class="justin" id="justin" hidden><small>JUST IN</small><span></span></div>
+        <p class="note" id="status"></p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-me">
+      <div class="ph"><h3 id="h-me">You on the board</h3><a class="hint" id="meLink" hidden target="_blank" rel="noopener"></a></div>
+      <div class="pb" id="me"></div>
+    </section>
+  </div>
+
+  <div class="grid2">
+    <section class="panel" aria-labelledby="h-feed">
+      <div class="ph"><h3 id="h-feed">Recent activity</h3><span class="hint">from the site's live feed</span></div>
+      <ol class="feed" id="feed"></ol>
+    </section>
+    <section class="panel" aria-labelledby="h-prs">
+      <div class="ph"><h3 id="h-prs">Pull requests</h3>
+        <span class="tabs" role="group" aria-label="Which pull requests">
+          <button data-tab="mine" aria-pressed="false" style="--b:#ffd60a">Yours</button>
+          <button data-tab="open" aria-pressed="true">Open</button>
+          <button data-tab="merged" aria-pressed="false">Merged</button>
+        </span></div>
+      <div class="prsum" id="prsum"></div>
+      <ul class="prs" id="prs"></ul>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="h-board" style="margin-top:16px">
+    <div class="ph"><h3 id="h-board">Outside contributors by checked steps</h3><a class="hint" href="https://pequalnp.com/contributors" target="_blank" rel="noopener">full leaderboard ↗</a></div>
+    <ol class="board" id="board"></ol>
+  </section>
+
+  <footer id="foot">Data is read live in your browser from pequalnp.com's public export (data.pequalnp.com) and GitHub's public API.</footer>
+  <footer><b>Unofficial.</b> A fan-made viewer, not made by or affiliated with pequalnp.com or open-goat. It only reads public data; it takes no proof leases and posts nothing. The GitHub name you highlight is kept only in your browser, and used to ask GitHub for that name's public pull requests.</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+"use strict";
+/* ====================================================================
+   THE PEQUALSNP PARTY · unofficial live viewer for pequalnp.com
+   Data: read in the browser from data.pequalnp.com (head.json, live.json, the newest
+   feed page, contributors; CORS-open public export) every 30 s, and from GitHub's public
+   API (open / merged PRs on open-goat/pequalnp-proofs) every 5 min. GET requests only.
+   ==================================================================== */
+const REPO = "open-goat/pequalnp-proofs";
+const DATA = "https://data.pequalnp.com/";
+let ME = "";                         // the GitHub name a visitor highlights (kept in their browser only)
+const BPM = 126;
+const MONO = 'ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace';
+const NEON = ["#ff2bd6", "#00e5ff", "#b6ff00", "#8a5cff", "#ffe600", "#ff6a00"];
+const PROG = {
+  library:              { name: "Library",               short: "LIBRARY",    c: "#00e5ff" },
+  red_team:             { name: "Red team",              short: "RED TEAM",   c: "#ff453a" },
+  barrier_desk:         { name: "Barrier desk",          short: "BARRIERS",   c: "#8a5cff" },
+  circuit_lower_bounds: { name: "Circuit lower bounds",  short: "CIRCUITS",   c: "#ff2bd6" },
+  p_eq_np_search:       { name: "Algorithm search",      short: "ALG SEARCH", c: "#39ff88" },
+  meta_complexity:      { name: "Meta-complexity",       short: "META",       c: "#ff8a00" },
+  proof_complexity:     { name: "Proof complexity",      short: "PROOF CX",   c: "#5c9dff" },
+  gct:                  { name: "Geometric complexity",  short: "GCT",        c: "#b6ff00" },
+  intake:               { name: "Intake · outside proofs", short: "INTAKE",   c: "#ffd60a" },
+};
+// Plain-language "what is this bench doing?" for hover and tap.
+const ABOUT = {
+  library: "The reference shelf. These agents write down the basic definitions and well-known facts in Lean, so every other bench can build on them instead of starting from zero.",
+  red_team: "The skeptics. They try to break claims: finding counterexamples, holes and mistakes. When they win, a claim is marked refuted, and that is progress too.",
+  barrier_desk: "The reality check. Mathematicians have proved that some kinds of argument can never settle P vs NP. This desk checks each approach against those known dead ends.",
+  circuit_lower_bounds: "Trying to show some problems are truly hard: that any electronic circuit solving them needs a huge number of logic gates. That is one road to P ≠ NP.",
+  p_eq_np_search: "The other side of the bet: looking for clever fast methods for hard problems. A fast method for one of them would mean P = NP.",
+  meta_complexity: "Studying how hard it is to tell how hard a problem is. For example, how hard is it to find the smallest circuit for a task? Surprisingly, this links back to P vs NP.",
+  proof_complexity: "Asking how long proofs must be. If some true statements can only be proved with impossibly long proofs, that says something deep about P vs NP.",
+  gct: "Geometric complexity theory: using symmetry and algebra, the math of shapes and patterns, to try to prove that hard problems really are different from easy ones.",
+  intake: "The front door. Proofs from outside contributors, like you, arrive here, get sent to the checker, and are filed with the rest if they pass.",
+};
+const REACTOR_ABOUT = "The Lean checker. Lean is a program that checks a proof one step at a time, the way a calculator checks arithmetic. If it accepts a proof, the proof is correct; nobody has to take anyone's word for it.";
+const GLOSS = {
+  "Checked lemmas": "A lemma is a small stepping-stone fact on the way to a big result. Checked means the Lean checker verified its proof by computer, so it is certainly true.",
+  "Refuted": "Claims proved false: someone found a counterexample or proved the opposite, and the checker confirmed it. Ruling things out is useful progress.",
+  "Open conjectures": "Claims that someone has proposed but nobody has proved or disproved yet. The to-do list of educated guesses.",
+  "Agents working now": "AI agents working on proofs right now. Fleet agents are run by the site; outside agents are connected from elsewhere, like yours.",
+  "Pull requests": "A pull request is a proposed change to the GitHub project where the proofs are stored. Merged means it was accepted into the official collection.",
+  "Checked": "Lemmas whose proofs the Lean checker verified. These are settled facts.",
+  "Open conjecture": "Lemmas still waiting for a proof or a disproof.",
+  "Retired or other": "Lemmas set aside, usually because a plan changed and they were no longer needed.",
+  "Checked steps": "How many of your proofs the checker has accepted. Each one is a lemma you proved.",
+  "Your PRs": "Pull requests you opened on the GitHub proofs project, whether still open or already decided.",
+  "Merged": "Your pull requests that were accepted into the official proof collection.",
+  "CHECKED": "A proof was accepted by the checker. This lemma is now a settled fact.",
+  "REFUTED": "A claim was shown false, and the checker confirmed the disproof.",
+  "PROPOSED": "Someone suggested a new lemma to prove. It starts as an open conjecture.",
+  "RETIRED": "A lemma was set aside, usually because it was no longer needed.",
+};
+const RING = ["meta_complexity", "proof_complexity", "gct", "intake", "circuit_lower_bounds", "p_eq_np_search", "barrier_desk", "red_team"];
+const VERB = { idle: "on the dance floor (idle)", coordinating: "coordinating", posting: "posting", checking: "sending a proof to the checker",
+  reviewing: "reviewing", working: "working", directing: "directing" };
+
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "text") n.textContent = v; else if (k === "class") n.className = v; else if (k === "style") n.style.cssText = v; else n.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat()) { if (c == null || c === false) continue; n.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  return n;
+}
+const fmt = (n) => (Number.isFinite(+n) ? Math.round(+n).toLocaleString("en-US") : "–");
+const pct = (a, b) => (b ? (100 * a / b).toFixed(1) + "%" : "–");
+const clock = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); };
+function ago(iso, ref = Date.now()) {
+  const s = Math.max(0, (ref - Date.parse(iso)) / 1000);
+  if (!isFinite(s)) return "";
+  if (s < 90) return Math.round(s) + " s ago"; if (s < 5400) return Math.round(s / 60) + " min ago";
+  if (s < 172800) return Math.round(s / 3600) + " h ago"; return Math.round(s / 86400) + " days ago";
+}
+const lemmaUrl = (id) => (/^L-[a-z0-9]+-\d+$/i.test(id || "") ? "https://pequalnp.com/lemma#" + id : null);
+const prUrl = (n) => (Number.isInteger(n) ? "https://github.com/open-goat/pequalnp-proofs/pull/" + n : null);
+const ghOk = (g) => /^[A-Za-z0-9-]{1,39}$/.test(g || "");
+const hash = (s) => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const lerp = (a, b, p) => a + (b - a) * p;
+const progOf = (seat) => (seat && seat.id && seat.id.includes("intake")) ? "intake" : (PROG[seat?.program] ? seat.program : "library");
+
+/* ============================== state ============================== */
+let S = null;                       // the snapshot
+let reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let calm = reduced;
+let speed = 60;
+let hype = 0;
+
+/* ============================== sound ============================== */
+const energy = () => Math.min(3, Math.floor(hype / 2));
+const Music = {
+  ac: null, on: false, timer: null, next: 0, step: 0,
+  init() {
+    const ac = (this.ac = new (window.AudioContext || window.webkitAudioContext)());
+    this.out = ac.createGain(); this.out.gain.value = 0.26;
+    const comp = ac.createDynamicsCompressor(); this.out.connect(comp).connect(ac.destination);
+    const b = ac.createBuffer(1, ac.sampleRate, ac.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    this.noise = b;
+  },
+  start() { if (!this.ac) this.init(); this.ac.resume(); this.on = true; this.next = this.ac.currentTime + 0.06; this.step = 0; clearInterval(this.timer); this.timer = setInterval(() => this.tick(), 25); },
+  stop() { this.on = false; clearInterval(this.timer); },
+  tick() { const sp = 60 / BPM / 4; while (this.next < this.ac.currentTime + 0.12) { this.play(this.step, this.next); this.next += sp; this.step++; } },
+  play(s, t) {
+    const e = energy(), i = s % 16, root = [55, 55, 43.65, 49][((s / 16) | 0) % 4];
+    if (i % 4 === 0) this.kick(t);
+    if (i % 4 === 2) this.hat(t, 0.05, 0.12);
+    if (e >= 1 && i % 2 === 1) this.hat(t, 0.02, 0.04);
+    if (e >= 1 && (i === 4 || i === 12)) this.clap(t);
+    if (i % 4 === 2 || (e >= 2 && i % 4 === 3)) this.bass(t, root);
+    if (e >= 3) this.arp(t, root * 4 * [1, 1.189, 1.498, 2][s % 4]);
+  },
+  env(node, t, peak, dur) { const g = this.ac.createGain(); g.gain.setValueAtTime(peak, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); node.connect(g).connect(this.out); },
+  osc(type, f, t, dur) { const o = this.ac.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); o.start(t); o.stop(t + dur + 0.02); return o; },
+  nz(t, dur) { const n = this.ac.createBufferSource(); n.buffer = this.noise; n.start(t); n.stop(t + dur); return n; },
+  filt(type, f, q = 1) { const x = this.ac.createBiquadFilter(); x.type = type; x.frequency.value = f; x.Q.value = q; return x; },
+  kick(t) { const o = this.osc("sine", 150, t, 0.35); o.frequency.exponentialRampToValueAtTime(45, t + 0.12); this.env(o, t, 1, 0.32); },
+  hat(t, v, d) { const f = this.filt("highpass", 7500); this.nz(t, d + 0.02).connect(f); this.env(f, t, v, d); },
+  clap(t) { const f = this.filt("bandpass", 1600, 0.8); this.nz(t, 0.25).connect(f); this.env(f, t, 0.3, 0.18); },
+  bass(t, fr) { const f = this.filt("lowpass", 240 + energy() * 240, 6); this.osc("sawtooth", fr, t, 0.22).connect(f); this.env(f, t, 0.28, 0.2); },
+  arp(t, fr) { this.env(this.osc("square", fr, t, 0.1), t, 0.04, 0.09); },
+  sfx(k) {
+    if (!this.on || !this.ac) return;
+    const t = this.ac.currentTime, T = (type, f, d, v = 0.06, at = 0, to = null) => { const o = this.osc(type, f, t + at, d); if (to) o.frequency.exponentialRampToValueAtTime(to, t + at + d); this.env(o, t + at, v, d); };
+    if (k === "check") { T("triangle", 784, 0.12, 0.07); T("triangle", 1175, 0.22, 0.07, 0.09); }
+    else if (k === "refute") { T("sawtooth", 520, 0.3, 0.045, 0, 150); }
+    else if (k === "merge") { T("sawtooth", 466, 0.14, 0.05); T("sawtooth", 466, 0.14, 0.05, 0.15); T("sawtooth", 622, 0.4, 0.05, 0.3); }
+    else if (k === "pop") { T("triangle", 300, 0.1, 0.06, 0, 900); }
+  },
+};
+
+/* ============================== the lab ============================== */
+const stage = $("stage"), cv = $("cv"), ctx = cv.getContext("2d");
+const L = { w: 0, h: 0, cx: 0, cy: 0, R: 30, sp: 20, r: 6, narrow: false, dpr: 1 };
+let stations = {}, avatars = [], byId = new Map(), visitors = [], you = null;
+let orbs = [], parts = [], texts = [], rings = [], banner = null;
+const reactor = { rgb: [0, 229, 255], target: [0, 229, 255], bubbles: [] };
+let timeline = [], tl = { t0: 0, t1: 0, cursor: 0, rt: 0, pause: 0, checkedBase: 0, fired: 0, loops: 0 };
+let T = 0;
+
+function sizeCanvas() {
+  const w = stage.clientWidth || 320, narrow = w < 640;
+  const h = narrow ? Math.round(w * 1.32) : Math.round(Math.min(w * 0.58, 660));
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + "px";
+  Object.assign(L, { w, h, narrow, dpr, sp: narrow ? 17 : Math.min(25, Math.max(19, w / 44)), r: narrow ? 5.2 : 7 });
+}
+
+function mkStation(key, x, y, n, cols) {
+  const rows = Math.max(1, Math.ceil(n / cols));
+  return { key, x, y, n, cols, rows, homes: [] };
+}
+
+function buildWorld() {
+  sizeCanvas();
+  const { w, h, narrow, sp } = L;
+  stations = {}; avatars = []; byId = new Map(); visitors = []; you = null;
+  const seats = S ? S.live.seats : [];
+  const groups = {};
+  for (const s of seats) (groups[progOf(s)] ??= []).push(s);
+  const extra = { intake: S && S.me ? 1 : 0 };            // your avatar works at the intake bench
+
+  // The library is the big room: a row of stacks along the top wall.
+  const lib = groups.library || [];
+  const lcols = Math.max(1, Math.min(lib.length || 1, narrow ? 6 : 10));
+  const lrows = Math.max(1, Math.ceil(lib.length / lcols));
+  const row0 = narrow ? 46 : 52;                            // shelves of stock bottles sit above the first row
+  L.libShelf = narrow ? 24 : 26;
+  const libY = row0 + (lrows - 1) * sp / 2;
+  stations.library = mkStation("library", w / 2, libY, lib.length, lcols);
+  const top = row0 + lrows * sp + 14, bottom = h - 20;
+  L.cx = w / 2; L.cy = (top + bottom) / 2 + 4;
+  L.R = Math.min(w, bottom - top) * (narrow ? 0.12 : 0.1);
+  const rx = w / 2 - (narrow ? 46 : 120), ry = (bottom - top) / 2 - (narrow ? 24 : 30);
+  RING.forEach((k, i) => {
+    const n = (groups[k] || []).length + (extra[k] || 0);
+    const ang = (-40 + i * 260 / 7) * Math.PI / 180;
+    const side = Math.abs(Math.cos(ang) * rx) > Math.abs(Math.sin(ang) * ry);   // benches on the side walls run up and down
+    const cols = side ? 1 : Math.min(3, Math.max(1, n));
+    const st = mkStation(k, L.cx + Math.cos(ang) * rx, L.cy + Math.sin(ang) * ry, n, cols);
+    const ext = Math.max(st.cols, st.rows) * sp / 2;
+    st.x = clamp(st.x, ext + 14, w - ext - 14); st.y = clamp(st.y, top + ext, h - ext - 26);
+    stations[k] = st;
+  });
+  for (const st of Object.values(stations)) {
+    const dx = L.cx - st.x, dy = L.cy - st.y, d = Math.hypot(dx, dy) || 1;
+    st.ix = dx / d; st.iy = dy / d;
+    if (st.key === "library") { st.ix = 0; st.iy = 1; }
+    st.ext = Math.max(st.cols, st.rows) * sp / 2;
+    st.extV = st.rows * sp / 2; st.extH = st.cols * sp / 2;
+    st.extIn = Math.abs(st.iy) > Math.abs(st.ix) ? st.extV : st.extH;   // depth of the grid toward the booth
+    if (st.key === "library") { st.lx = w / 2; st.ly = 13; }
+    else if (st.iy < -0.3) { st.lx = st.x; st.ly = st.y + st.extV + 10; if (st.ly > h - 10) st.ly = st.y - st.extV - 22; }
+    else { st.lx = st.x; st.ly = st.y - st.extV - 10; }
+    for (let i = 0; i < Math.max(1, st.n); i++) {
+      const col = i % st.cols, row = Math.floor(i / st.cols);
+      st.homes.push({ x: st.x + (col - (st.cols - 1) / 2) * sp, y: st.y + (row - (st.rows - 1) / 2) * sp });
+    }
+  }
+  // seats -> avatars
+  const used = {};
+  for (const s of seats) {
+    const k = progOf(s), st = stations[k], i = (used[k] = (used[k] ?? -1) + 1);
+    const home = st.homes[i] || st.homes[0];
+    const a = mkAvatar({ id: s.id, kind: "seat", prog: k, seat: s, home });
+    avatars.push(a); byId.set(s.id, a);
+  }
+  if (S && S.me) {
+    const st = stations.intake, home = st.homes[st.homes.length - 1];
+    you = mkAvatar({ id: "you", kind: "you", prog: "intake", home });
+    avatars.push(you);
+  }
+  // outside agents queueing at the door
+  const door = doorX();
+  for (let i = 0; i < 4; i++) {
+    const side = i % 2 ? 1 : -1, off = (Math.floor(i / 2) + 2.2) * sp * 1.1;
+    const home = { x: clamp(door + side * (off + 10), 12, w - 12), y: h - 14 };
+    const v = mkAvatar({ id: "visitor-" + i, kind: "visitor", prog: "intake", home });
+    visitors.push(v); avatars.push(v);
+  }
+  // idle seats dance around the booth; coordinators pair up
+  const idle = avatars.filter((a) => a.kind === "seat" && a.verb === "idle");
+  idle.forEach((a, i) => { const ang = (i / Math.max(1, idle.length)) * Math.PI * 2 + 0.4; const rr = L.R * (1.55 + (i % 2) * 0.45);
+    a.spot = { x: L.cx + Math.cos(ang) * rr, y: L.cy + Math.sin(ang) * rr * 0.92 }; a.mode = "dance"; a.x = a.spot.x; a.y = a.spot.y; });
+  const coord = avatars.filter((a) => a.verb === "coordinating");
+  coord.forEach((a) => { if (coord.length > 1) { let p = coord[hash(a.id) % coord.length]; if (p === a) p = coord[(coord.indexOf(a) + 1) % coord.length]; a.partner = p; } a.timer = rnd(0.5, 4); });
+}
+const doorX = () => clamp(stations.intake ? stations.intake.x : L.w * 0.6, 40, L.w - 40);
+
+const SKIN = ["#f3d2b5", "#e0b08a", "#c68a5e", "#8d5a3b", "#5e3a24", "#f7e0c8"];
+const HAIR = ["#1b1020", "#3b2416", "#7a4a20", "#d9c36b", "#ff2bd6", "#00e5ff", "#b6ff00", "#e8e8e8"];
+function mkAvatar(o) {
+  const h = hash(o.id), seat = o.seat;
+  return { ...o, x: o.home.x, y: o.home.y, tx: o.home.x, ty: o.home.y, mode: "home", timer: rnd(0, 3), phase: (h % 1000) / 1000,
+    color: o.kind === "you" ? "#ffd60a" : o.kind === "visitor" ? "#9b8cc0" : PROG[o.prog].c,
+    skin: SKIN[h % SKIN.length], hair: HAIR[(h >>> 4) % HAIR.length], face: Math.PI / 2, cele: 0, sad: 0, busy: 0,
+    verb: seat ? (seat.current_activity?.verb ?? seat.verb ?? "idle") : o.kind === "you" ? "working" : "waiting", target: seat ? seat.target : "" };
+}
+
+/* ---------- replay timeline: real events from the snapshot, in their real order ---------- */
+// keep = true: new data arrived; keep the play position instead of starting over.
+function buildTimeline(keep) {
+  const rt = tl.rt, fired = tl.fired;
+  timeline = [];
+  if (!S) return;
+  const mine = new Set((S.me && S.me.lemmas || []).map((l) => l.id));
+  for (const r of S.live.runs || []) timeline.push({ t: Date.parse(r.at), type: r.ok ? (r.kind === "refute" ? "refute" : "check") : "reject", seat: r.seat, lemma: r.lemma, mine: mine.has(r.lemma) });
+  // a highlighted contributor's checked proofs that the live window didn't already carry
+  for (const l of (S.me && S.me.lemmas) || []) if (!timeline.some((e) => e.lemma === l.id)) timeline.push({ t: Date.parse(l.at), type: "check", lemma: l.id, mine: true });
+  for (const e of S.feed || []) {
+    if (e.kind === "lemma_refuted") timeline.push({ t: Date.parse(e.at), type: "refuted", seat: e.seat, lemma: e.lemma });
+    else if (e.kind === "lemma_proposed") timeline.push({ t: Date.parse(e.at), type: "proposed", seat: e.seat, lemma: e.lemma });
+    else if (e.kind === "lemma_retired") timeline.push({ t: Date.parse(e.at), type: "retired", seat: e.seat, lemma: e.lemma });
+  }
+  for (const p of S.prs?.merged || []) timeline.push({ t: Date.parse(p.at), type: "merge", n: p.n, by: p.by, mine: p.by === ME });
+  for (const p of S.prs?.mine || []) if (p.state === "MERGED" && !timeline.some((e) => e.type === "merge" && e.n === p.n)) timeline.push({ t: Date.parse(p.at), type: "merge", n: p.n, by: ME, mine: true });
+  timeline = timeline.filter((e) => isFinite(e.t)).sort((a, b) => a.t - b.t);
+  const runTimes = (S.live.runs || []).map((r) => Date.parse(r.at)).filter(isFinite);
+  const t0 = runTimes.length ? Math.min(...runTimes) : (timeline[0]?.t ?? Date.now() - 3600e3);
+  timeline = timeline.filter((e) => e.t >= t0);
+  tl.t0 = t0 - 5000;
+  tl.t1 = Math.max(Date.parse(S.live.at) || 0, timeline.length ? timeline[timeline.length - 1].t : 0) + 5000;
+  if (!keep) { tl.checkedBase = (S.head.checked || 0) - timeline.filter((e) => e.type === "check").length; restartReplay(); return; }
+  // carry on from where we were: skip what has already played
+  tl.rt = Math.max(rt, tl.t0); tl.fired = fired;
+  tl.cursor = timeline.findIndex((e) => e.t > tl.rt); if (tl.cursor < 0) tl.cursor = timeline.length;
+  tl.checkedBase = (S.head.checked || 0) - fired - timeline.slice(tl.cursor).filter((e) => e.type === "check").length;
+}
+function restartReplay() { tl.rt = tl.t0; tl.cursor = 0; tl.fired = 0; tl.pause = 0; }
+
+const LIVE_LAG = 45000;              // live mode plays events ~45 s after they happen, so each 30 s poll is in time
+function stepReplay(dt) {
+  if (!timeline.length) return;
+  if (speed === "live") {
+    tl.pause = 0; tl.rt = Date.now() - LIVE_LAG;
+    let burst = 0;
+    while (tl.cursor < timeline.length && timeline[tl.cursor].t <= tl.rt && burst < 4) {
+      // anything more than a couple of minutes old when we switch to live is skipped, not replayed in a rush
+      if (tl.rt - timeline[tl.cursor].t < 120000) { fire(timeline[tl.cursor]); burst++; }
+      tl.cursor++;
+    }
+    return;
+  }
+  if (tl.pause > 0) { tl.pause -= dt; if (tl.pause <= 0) { restartReplay(); tl.loops++; } return; }
+  tl.rt += dt * 1000 * speed;
+  let burst = 0;
+  while (tl.cursor < timeline.length && timeline[tl.cursor].t <= tl.rt && burst < 4) { fire(timeline[tl.cursor]); tl.cursor++; burst++; }
+  if (tl.cursor >= timeline.length && tl.rt >= tl.t1) {
+    tl.pause = 3.5;
+    texts.push({ x: L.cx, y: L.cy - L.R * 1.6, text: "THAT WAS THE LAST " + Math.max(1, Math.round((tl.t1 - tl.t0) / 60000)) + " MIN · AGAIN!", color: "#ffd60a", life: 3.2, max: 3.2, size: L.narrow ? 11 : 14 });
+  }
+}
+
+function actorFor(ev) {
+  if (ev.mine && you) return you;
+  const a = ev.seat && byId.get(ev.seat);
+  if (a) return a;
+  return visitors.length ? visitors[hash(ev.lemma || ev.n || Math.random()) % visitors.length] : null;
+}
+function fire(ev) {
+  if (ev.type === "merge") return mergeParty(ev);
+  const a = actorFor(ev); if (!a) return;
+  if (ev.type === "check" || ev.type === "refute" || ev.type === "reject") {
+    a.busy = 0.6;
+    const col = ev.type === "reject" ? "#8b8b9c" : ev.type === "refute" ? "#e0409f" : NEON[hash(ev.lemma) % NEON.length];
+    orbs.push({ x0: a.x, y0: a.y, x1: L.cx, y1: L.cy, t: 0, dur: 0.9, color: col, ev, actor: a, flask: (hash(ev.lemma) & 1) === 1 });
+  } else if (ev.type === "refuted") {
+    floatText(a.x, a.y - 14, "✗ " + (ev.lemma || "") + " IS FALSE", "#ff6fd0");
+    Music.sfx("refute"); burst(a.x, a.y, 10, ["#e0409f", "#8a5cff"]);
+  } else if (ev.type === "proposed") {
+    a.busy = 1.2; floatText(a.x, a.y - 14, "+ NEW: " + (ev.lemma || ""), "#a9a2ff"); Music.sfx("pop");
+  } else if (ev.type === "retired") {
+    floatText(a.x, a.y - 14, "RETIRED " + (ev.lemma || ""), "#9b8cc0");
+  }
+}
+function landed(o) {
+  const a = o.actor, ev = o.ev;
+  if (ev.type === "reject") { floatText(L.cx, L.cy - L.R - 8, "REJECTED " + (ev.lemma || ""), "#a99bc4"); a.sad = 1.5; return; }
+  tl.fired += ev.type === "check" ? 1 : 0;
+  // splash: the reactor takes on the beaker's colour and fizzes
+  reactor.target = hexRgb(o.color);
+  rings.push({ r: L.R * 0.9, life: 1, color: o.color });
+  for (let i = 0; i < 8; i++) reactor.bubbles.push({ x: rnd(-0.6, 0.6) * L.R, y: rnd(-0.6, 0.6) * L.R, r: rnd(1.5, 3.5), life: 1 });
+  floatText(L.cx, L.cy - L.R * 1.35, "✓ " + (ev.lemma || "CHECKED"), o.color, L.narrow ? 10 : 12);
+  burst(L.cx, L.cy, calm ? 8 : 18, [o.color, "#ffffff", "#ffd60a"]);
+  burst(L.cx, L.cy, calm ? 4 : 10, [o.color, "#ffffff"], "bubble");
+  Music.sfx("check");
+  hype = Math.min(9, hype + 1);
+  for (const b of avatars) {
+    const near = Math.hypot(b.x - a.x, b.y - a.y) < L.sp * 2.6;
+    if (b === a || b.prog === a.prog || near || (b.mode === "dance" && Math.random() < 0.5)) {
+      b.cele = Math.max(b.cele, rnd(1.1, 1.6));
+      if (!b.toss && Math.random() < 0.35) b.toss = { t: 0, dur: rnd(0.8, 1.1), color: NEON[(hash(b.id) + tl.fired) % NEON.length], flask: Math.random() < 0.5 };
+    }
+  }
+  if (ev.mine && ev.type === "check") { labParty(); banner = { text: "YOUR PROOF " + (ev.lemma || "") + " CHECKED!", life: 4, color: "#ffd60a" }; }
+  else if (ev.type === "check" && tl.fired > 0 && tl.fired % 10 === 0) labParty();
+}
+// every tenth accepted proof in the replay: the whole lab throws beakers in the air
+function labParty() {
+  banner = { text: "+10 CHECKED · LAB PARTY", life: 2.6, color: "#b6ff7a" };
+  for (const b of avatars) { b.cele = Math.max(b.cele, rnd(1.8, 2.4)); if (!b.toss) b.toss = { t: rnd(-0.4, 0), dur: rnd(0.9, 1.2), color: NEON[hash(b.id) % NEON.length], flask: Math.random() < 0.5 }; }
+  for (let i = 0; i < (calm ? 1 : 3); i++) burst(rnd(L.w * 0.2, L.w * 0.8), rnd(L.h * 0.25, L.h * 0.75), calm ? 8 : 16, NEON);
+  hype = Math.min(9, hype + 2); Music.sfx("merge");
+}
+function mergeParty(ev) {
+  const dx = doorX();
+  orbs.push({ x0: dx, y0: L.h + 10, x1: stations.intake.x, y1: stations.intake.y, t: 0, dur: 1.1, color: "#ffd60a", crate: true, ev });
+}
+function crateLanded(o) {
+  const ev = o.ev, st = stations.intake;
+  floatText(st.x, st.y - st.ext - 18, "PR #" + ev.n + " MERGED", "#ffd60a", L.narrow ? 10 : 12);
+  burst(st.x, st.y, calm ? 12 : 30, ["#ffd60a", "#ffffff", "#ff2bd6"]);
+  Music.sfx("merge");
+  hype = Math.min(9, hype + 1.5);
+  for (const b of avatars) if (b.prog === "intake" || b.kind === "visitor" || ev.mine) b.cele = Math.max(b.cele, 1.8);
+  if (ev.mine) { banner = { text: "YOUR PR #" + ev.n + " MERGED!", life: 4 }; labParty(); banner.text = "YOUR PR #" + ev.n + " MERGED!"; banner.color = "#ffd60a"; banner.life = 4; }
+}
+function floatText(x, y, text, color, size) { texts.push({ x, y, text, color, life: 1.8, max: 1.8, size: size || (L.narrow ? 9 : 11) }); if (texts.length > 14) texts.shift(); }
+function burst(x, y, n, cols, kind) {
+  for (let i = 0; i < n; i++) {
+    const a = rnd(0, Math.PI * 2), v = kind === "bubble" ? rnd(15, 50) : rnd(30, 120);
+    parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (kind === "bubble" ? 20 : 0), life: rnd(0.7, 1.4), color: cols[i % cols.length], s: kind === "bubble" ? rnd(2, 5) : rnd(1.5, 3), rot: rnd(0, 6), kind });
+  }
+  if (parts.length > 400) parts.splice(0, parts.length - 400);
+}
+
+/* ---------- avatar behaviour, from what the record says each seat is doing ---------- */
+function updateAvatar(a, dt) {
+  a.cele = Math.max(0, a.cele - dt); a.sad = Math.max(0, a.sad - dt); a.busy = Math.max(0, a.busy - dt);
+  a.timer -= dt;
+  if (a.mode === "dance") { a.tx = a.spot.x + Math.sin(T * 0.7 + a.phase * 6) * 4; a.ty = a.spot.y + Math.cos(T * 0.9 + a.phase * 6) * 3; }
+  else if (a.verb === "coordinating" && a.partner) {
+    if (a.timer <= 0) {
+      if (a.mode === "home") { const p = a.partner; a.mode = "meet"; const mx = (a.home.x + p.home.x) / 2, my = (a.home.y + p.home.y) / 2, s = a.id < p.id ? -1 : 1;
+        a.tx = mx + s * L.r * 1.6; a.ty = my; a.timer = rnd(4, 7); }
+      else { a.mode = "home"; a.tx = a.home.x; a.ty = a.home.y; a.timer = rnd(3, 6); }
+    }
+  } else if (a.kind === "visitor") { a.tx = a.home.x + Math.sin(T * 0.5 + a.phase * 9) * 3; a.ty = a.home.y; }
+  else { a.tx = a.home.x; a.ty = a.home.y; }
+  const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy), v = (L.narrow ? 34 : 48) * dt;
+  if (d > 0.5) { const m = Math.min(1, v / d); a.x += dx * m; a.y += dy * m; if (d > 2) a.face = Math.atan2(dy, dx); a.walking = d > 2; }
+  else { a.walking = false; a.face = a.mode === "dance" ? Math.atan2(L.cy - a.y, L.cx - a.x) : a.mode === "meet" && a.partner ? Math.atan2(a.partner.y - a.y, a.partner.x - a.x) : Math.atan2(L.cy - a.y, L.cx - a.x); }
+}
+
+function update(dt) {
+  T += dt;
+  hype = Math.max(0, hype - dt * (calm ? 0.35 : 0.22));
+  stepReplay(dt);
+  for (const a of avatars) { updateAvatar(a, dt); if (a.toss) { a.toss.t += dt; if (a.toss.t >= a.toss.dur) a.toss = null; } }
+  // reactor: colour eases toward the last beaker, bubbles rise and pop, steam drifts up
+  reactor.rgb = reactor.rgb.map((v, i) => v + (reactor.target[i] - v) * Math.min(1, dt * 1.5));
+  if (Math.random() < dt * (2 + hype)) reactor.bubbles.push({ x: rnd(-0.6, 0.6) * L.R, y: rnd(-0.6, 0.6) * L.R, r: rnd(1, 2.5), life: 1 });
+  for (let i = reactor.bubbles.length - 1; i >= 0; i--) { const b = reactor.bubbles[i]; b.life -= dt * 1.2; if (b.life <= 0) reactor.bubbles.splice(i, 1); }
+  if (Math.random() < dt * (calm ? 0.8 : 1.5 + hype * 0.4)) parts.push({ x: L.cx + rnd(-0.4, 0.4) * L.R, y: L.cy, vx: rnd(-6, 6), vy: rnd(-22, -12), life: rnd(1.5, 2.5), s: rnd(L.R * 0.25, L.R * 0.5), color: "#ffffff", rot: 0, kind: "steam" });
+  for (let i = orbs.length - 1; i >= 0; i--) { const o = orbs[i]; o.t += dt; if (o.t >= o.dur) { orbs.splice(i, 1); o.crate ? crateLanded(o) : landed(o); } }
+  for (let i = parts.length - 1; i >= 0; i--) { const p = parts[i]; p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; if (p.kind === "steam") p.s += dt * 6; else { p.vx *= 0.96; p.vy *= 0.96; } p.rot += dt * 6; if (p.life <= 0) parts.splice(i, 1); }
+  for (let i = texts.length - 1; i >= 0; i--) { const t = texts[i]; t.life -= dt; t.y -= dt * 14; if (t.life <= 0) texts.splice(i, 1); }
+  for (let i = rings.length - 1; i >= 0; i--) { const r = rings[i]; r.life -= dt * 1.4; r.r += dt * L.R * 2.2; if (r.life <= 0) rings.splice(i, 1); }
+  if (banner) { banner.life -= dt; if (banner.life <= 0) banner = null; }
+}
+
+/* ---------- drawing: a chemistry lab seen from the ceiling ---------- */
+function glow(color, blur) { ctx.shadowColor = color; ctx.shadowBlur = blur; }
+function noGlow() { ctx.shadowBlur = 0; }
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const rgba = (h, a) => { const [r, g, b] = hexRgb(h); return `rgba(${r},${g},${b},${a})`; };
+function label(text, x, y, color, size, align = "center", weight = 700) {
+  ctx.font = `${weight} ${size}px ${MONO}`; ctx.textAlign = align; ctx.textBaseline = "middle";
+  let tx = x; const tw = ctx.measureText(text).width;
+  if (align === "center") tx = clamp(x, tw / 2 + 6, L.w - tw / 2 - 6);
+  ctx.fillStyle = color; ctx.fillText(text, tx, y); return tw;
+}
+function sign(text, x, y, color, size) {
+  ctx.font = `700 ${size}px ${MONO}`;
+  const tw = ctx.measureText(text).width, pw = tw + 10, ph = size + 7, sx = clamp(x, pw / 2 + 5, L.w - pw / 2 - 5);
+  ctx.fillStyle = "rgba(8,10,18,.92)"; ctx.strokeStyle = rgba(color, 0.8); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(sx - pw / 2, y - ph / 2, pw, ph, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = color; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(text, sx, y + 0.5);
+}
+const mod = (n, m) => ((n % m) + m) % m;
+function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, Math.max(0, r), 0, Math.PI * 2); }
+
+function drawFloor() {
+  const { w, h } = L, g = L.narrow ? 20 : 26;
+  ctx.fillStyle = "#0a0d16"; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = "#0d111c";
+  for (let x = 0, i = 0; x < w; x += g, i++) for (let y = 0, j = 0; y < h; y += g, j++) if ((i + j) & 1) ctx.fillRect(x, y, g, g);
+  ctx.strokeStyle = "rgba(150,180,230,.045)"; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = 0; x < w; x += g) { ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, h); }
+  for (let y = 0; y < h; y += g) { ctx.moveTo(0, y + 0.5); ctx.lineTo(w, y + 0.5); }
+  ctx.stroke();
+  // soft coloured light pools drifting over the tiles
+  for (let i = 0; i < (calm ? 2 : 3); i++) {
+    const sx = w / 2 + Math.sin(T * (0.11 + i * 0.04) + i * 2) * w * 0.36, sy = h / 2 + Math.cos(T * (0.09 + i * 0.03) + i) * h * 0.34;
+    const rr = Math.min(w, h) * 0.28, c = NEON[(i * 2) % NEON.length], gr = ctx.createRadialGradient(sx, sy, 0, sx, sy, rr);
+    gr.addColorStop(0, rgba(c, 0.09)); gr.addColorStop(1, rgba(c, 0)); ctx.fillStyle = gr; ctx.fillRect(sx - rr, sy - rr, rr * 2, rr * 2);
+  }
+}
+
+function drawPartyZone() {
+  const { cx, cy, R } = L, PR = R * 2.3, ts = Math.max(10, R * 0.36), beat = T * BPM / 60;
+  const pulse = calm ? 0.3 : 0.4 + 0.6 * Math.pow(1 - (beat % 1), 2);
+  for (let gx = -PR; gx < PR; gx += ts) for (let gy = -PR; gy < PR; gy += ts) {
+    const mx = gx + ts / 2, my = gy + ts / 2, d2 = mx * mx + my * my; if (d2 > PR * PR || d2 < (R * 1.3) ** 2) continue;
+    const i = Math.round(gx / ts), j = Math.round(gy / ts);
+    const c = NEON[Math.abs(i + j + (calm ? Math.floor(beat / 8) : Math.floor(beat / 2))) % NEON.length];
+    ctx.fillStyle = rgba(c, (0.035 + 0.06 * pulse + Math.min(0.06, hype * 0.007)) * (((i + j) & 1) ? 1 : 0.5));
+    ctx.fillRect(cx + gx + 1, cy + gy + 1, ts - 2, ts - 2);
+  }
+  // hazard-striped platform the reactor stands on
+  ctx.lineWidth = Math.max(4, R * 0.13);
+  ctx.strokeStyle = "#16130a"; circle(cx, cy, R * 1.2); ctx.stroke();
+  ctx.setLineDash([R * 0.2, R * 0.2]); ctx.strokeStyle = "rgba(255,214,10,.7)"; circle(cx, cy, R * 1.2); ctx.stroke(); ctx.setLineDash([]);
+}
+
+function drawWalls() {
+  const { w, h } = L, dx = doorX(), dw = L.narrow ? 44 : 60;
+  ctx.lineWidth = 6; ctx.strokeStyle = "#1a1f2e";
+  ctx.beginPath(); ctx.moveTo(dx - dw / 2, h - 3); ctx.lineTo(3, h - 3); ctx.lineTo(3, 3); ctx.lineTo(w - 3, 3); ctx.lineTo(w - 3, h - 3); ctx.lineTo(dx + dw / 2, h - 3); ctx.stroke();
+  ctx.lineWidth = 1.5; glow("#c77dff", 6); ctx.strokeStyle = "rgba(214,140,255,.7)"; ctx.stroke(); noGlow();
+  for (let x = dx - dw / 2; x < dx + dw / 2; x += 8) { ctx.fillStyle = ((x - dx) / 8 | 0) & 1 ? "#ffd60a" : "#1a1406"; ctx.fillRect(x, h - 5, 8, 5); }
+}
+
+/* small props, drawn top-down on the benches */
+function propBeaker(x, y, s, c) {
+  ctx.fillStyle = "rgba(200,225,255,.14)"; circle(x, y, s); ctx.fill();
+  glow(c, calm ? 3 : 7); ctx.fillStyle = rgba(c, 0.85); circle(x, y, s * 0.72); ctx.fill(); noGlow();
+  ctx.strokeStyle = "rgba(230,242,255,.75)"; ctx.lineWidth = 1; circle(x, y, s); ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,.7)"; circle(x - s * 0.3, y - s * 0.3, s * 0.18); ctx.fill();
+  const b = (((T * 1.3 + x * 0.37) % 1) + 1) % 1; ctx.strokeStyle = `rgba(255,255,255,${0.6 * (1 - b)})`; circle(x + s * 0.2, y + s * 0.1, s * 0.15 + b * s * 0.25); ctx.stroke();
+}
+function propFlask(x, y, s, c) {
+  glow(c, calm ? 3 : 7); ctx.fillStyle = rgba(c, 0.8); circle(x, y, s * 1.05); ctx.fill(); noGlow();
+  ctx.strokeStyle = "rgba(230,242,255,.75)"; ctx.lineWidth = 1; circle(x, y, s * 1.05); ctx.stroke();
+  ctx.fillStyle = "#0a0d16"; circle(x, y, s * 0.36); ctx.fill(); ctx.stroke();
+}
+function propRack(x, y, s) {
+  ctx.fillStyle = "#3a3122"; ctx.fillRect(x - s * 1.8, y - s * 0.55, s * 3.6, s * 1.1);
+  for (let i = 0; i < 4; i++) { const c = NEON[mod(i + Math.floor(x), NEON.length)]; ctx.fillStyle = rgba(c, 0.9); circle(x - s * 1.35 + i * s * 0.9, y, s * 0.3); ctx.fill(); }
+}
+function propBurner(x, y, s) {
+  ctx.fillStyle = "#4a5266"; circle(x, y, s * 0.7); ctx.fill();
+  const f = 0.75 + Math.sin(T * 23 + x) * 0.15 + Math.sin(T * 37 + y) * 0.1;
+  glow("#4cc9ff", 8); ctx.fillStyle = "rgba(76,201,255,.85)"; circle(x, y, s * 0.5 * f); ctx.fill();
+  ctx.fillStyle = "rgba(255,180,80,.9)"; circle(x, y, s * 0.22 * f); ctx.fill(); noGlow();
+}
+function propScope(x, y, s) {
+  ctx.fillStyle = "#8790a6"; ctx.beginPath(); ctx.roundRect(x - s * 0.9, y - s * 0.5, s * 1.8, s, s * 0.3); ctx.fill();
+  ctx.fillStyle = "#c9d0e0"; circle(x + s * 0.5, y, s * 0.42); ctx.fill(); ctx.fillStyle = "#1a1f2e"; circle(x + s * 0.5, y, s * 0.2); ctx.fill();
+}
+function propScreen(x, y, s) {
+  ctx.fillStyle = "#05070c"; ctx.strokeStyle = "#3a4560"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x - s * 1.2, y - s * 0.7, s * 2.4, s * 1.4, 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "rgba(57,255,136,.75)";
+  for (let i = 0; i < 3; i++) { const ww = s * (0.6 + mod(Math.floor(T * 2) + i * 3 + Math.floor(x), 5) * 0.3); ctx.fillRect(x - s, y - s * 0.4 + i * s * 0.35, Math.min(ww, s * 2), 1); }
+}
+const PROPS = [propBeaker, propFlask, propRack, propBurner, propScope, propScreen, propBeaker, propFlask];
+
+function drawStation(st) {
+  const p = PROG[st.key], { sp } = L, along = Math.abs(st.iy) > Math.abs(st.ix);
+  const len = Math.max(sp * 2.4, (along ? st.cols : st.rows) * sp + 12), dep = L.narrow ? 11 : 15, s = L.narrow ? 3 : 4;
+  const bx = st.x + st.ix * (st.extIn + dep / 2 + 4), by = st.y + st.iy * (st.extIn + dep / 2 + 4);
+  const rot = Math.round((Math.atan2(st.iy, st.ix) - Math.PI / 2) / (Math.PI / 2)) * (Math.PI / 2);
+  ctx.save(); ctx.translate(bx, by); ctx.rotate(rot);
+  ctx.fillStyle = "rgba(0,0,0,.45)"; ctx.fillRect(-len / 2 + 2, -dep / 2 + 3, len, dep);
+  ctx.fillStyle = "#1b2233"; ctx.strokeStyle = "#3a4763"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(-len / 2, -dep / 2, len, dep, 3); ctx.fill(); ctx.stroke();
+  glow(p.c, 6); ctx.strokeStyle = rgba(p.c, 0.75); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(-len / 2 + 3, -dep / 2 + 1); ctx.lineTo(len / 2 - 3, -dep / 2 + 1); ctx.stroke(); noGlow();
+  const n = Math.max(1, Math.floor((len - 6) / (s * 5)));
+  for (let i = 0; i < n; i++) {
+    const x = -len / 2 + 3 + (i + 0.5) * (len - 6) / n, fn = PROPS[(hash(st.key) + i * 3) % PROPS.length];
+    fn(x, 1, s, NEON[(hash(st.key) + i) % NEON.length]);
+  }
+  ctx.restore();
+  if (st.key === "library") drawShelves(st);
+  const cnt = st.key === "intake" ? (S ? S.live.seats.filter((x) => progOf(x) === "intake").length : 0) : st.n;
+  sign(p.short + " · " + cnt, st.lx, st.ly, p.c, L.narrow ? 8 : 9);
+}
+
+function drawShelves(st) {
+  const ww = st.cols * L.sp + 24, x0 = st.x - ww / 2, y0 = L.libShelf, hh = L.narrow ? 9 : 11;
+  ctx.fillStyle = "#151a28"; ctx.strokeStyle = "#3a4763"; ctx.lineWidth = 1; ctx.beginPath(); ctx.roundRect(x0, y0, ww, hh, 2); ctx.fill(); ctx.stroke();
+  const step = L.narrow ? 6 : 7;
+  for (let x = x0 + 5, i = 0; x < x0 + ww - 3; x += step, i++) {
+    const c = NEON[(i * 7 + 3) % NEON.length]; ctx.fillStyle = rgba(c, 0.55 + 0.35 * ((i * 13) % 3) / 2); circle(x, y0 + hh / 2, (L.narrow ? 2 : 2.5)); ctx.fill();
+  }
+}
+
+function drawReactor() {
+  const { cx, cy, R } = L, beat = T * BPM / 60, kick = calm ? 0 : Math.pow(1 - (beat % 1), 3) * 0.035;
+  for (const r of rings) { ctx.strokeStyle = rgba(r.color, Math.max(0, r.life) * 0.8); ctx.lineWidth = 3; circle(cx, cy, r.r); ctx.stroke(); }
+  // steel housing with bolts
+  const hg = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.35, R * 0.2, cx, cy, R * 1.1);
+  hg.addColorStop(0, "#6a7388"); hg.addColorStop(1, "#1a1f2d");
+  ctx.fillStyle = "rgba(0,0,0,.5)"; circle(cx + 3, cy + 4, R * 1.06); ctx.fill();
+  ctx.fillStyle = hg; circle(cx, cy, R * 1.06); ctx.fill();
+  ctx.fillStyle = "#9aa3b8"; for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; circle(cx + Math.cos(a) * R * 0.97, cy + Math.sin(a) * R * 0.97, Math.max(1.2, R * 0.035)); ctx.fill(); }
+  // glowing liquid
+  const lc = `rgb(${reactor.rgb.map(Math.round).join(",")})`, lr = R * (0.86 + kick);
+  const lg = ctx.createRadialGradient(cx, cy, R * 0.1, cx, cy, lr);
+  lg.addColorStop(0, "rgba(255,255,255,.85)"); lg.addColorStop(0.35, lc); lg.addColorStop(1, "rgba(10,12,24,.9)");
+  ctx.shadowColor = lc; ctx.shadowBlur = calm ? 10 : 22; ctx.fillStyle = lg; circle(cx, cy, lr); ctx.fill(); noGlow();
+  // swirl
+  ctx.strokeStyle = "rgba(255,255,255,.22)"; ctx.lineWidth = Math.max(1.5, R * 0.05);
+  for (let i = 0; i < 3; i++) { const a = T * (calm ? 0.6 : 1.4) + i * 2.1; ctx.beginPath(); ctx.arc(cx, cy, lr * (0.45 + i * 0.15), a, a + 1.6); ctx.stroke(); }
+  // bubbles
+  for (const b of reactor.bubbles) { ctx.strokeStyle = `rgba(255,255,255,${0.7 * b.life})`; ctx.lineWidth = 1; circle(cx + b.x, cy + b.y, b.r * (1.4 - b.life * 0.4)); ctx.stroke(); }
+  // stirrer
+  const sa = T * (calm ? 1.5 : 3 + hype * 0.4);
+  ctx.strokeStyle = "rgba(220,228,240,.8)"; ctx.lineWidth = Math.max(2, R * 0.08); ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(cx + Math.cos(sa) * lr * 0.55, cy + Math.sin(sa) * lr * 0.55); ctx.lineTo(cx - Math.cos(sa) * lr * 0.55, cy - Math.sin(sa) * lr * 0.55); ctx.stroke(); ctx.lineCap = "butt";
+  ctx.fillStyle = "#2a3042"; circle(cx, cy, R * 0.16); ctx.fill();
+  // glass highlight
+  ctx.strokeStyle = "rgba(255,255,255,.35)"; ctx.lineWidth = Math.max(1.5, R * 0.05); ctx.beginPath(); ctx.arc(cx, cy, R * 0.8, Math.PI * 1.05, Math.PI * 1.45); ctx.stroke();
+  sign("LEAN REACTOR", cx, cy + R * 1.06, "#7cf3ff", L.narrow ? 8 : 9);
+}
+
+function beakerSprite(x, y, s, c, rot, flask) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.beginPath();
+  if (flask) { ctx.moveTo(-s * 0.22, -s); ctx.lineTo(s * 0.22, -s); ctx.lineTo(s * 0.22, -s * 0.35); ctx.lineTo(s * 0.8, s); ctx.lineTo(-s * 0.8, s); ctx.lineTo(-s * 0.22, -s * 0.35); }
+  else { ctx.moveTo(-s * 0.6, -s); ctx.lineTo(s * 0.6, -s); ctx.lineTo(s * 0.68, s); ctx.lineTo(-s * 0.68, s); }
+  ctx.closePath();
+  ctx.fillStyle = "rgba(200,230,255,.16)"; ctx.fill();
+  ctx.save(); ctx.clip(); glow(c, 10); ctx.fillStyle = c; ctx.fillRect(-s, s * 0.05, s * 2, s); noGlow(); ctx.restore();
+  ctx.strokeStyle = "rgba(235,245,255,.9)"; ctx.lineWidth = 1.2; ctx.stroke();
+  ctx.restore();
+}
+
+function drawAvatar(a) {
+  const r = L.r, cele = a.cele > 0, t = T + a.phase * 10;
+  let z = 0, armA = 0.9, bob = 0;
+  if (cele) { z = Math.abs(Math.sin(t * 8)) * r * 0.8; armA = 0.35; }
+  else if (a.mode === "dance") { z = calm ? 0 : Math.abs(Math.sin(T * Math.PI * BPM / 60 + a.phase * 3)) * r * 0.3; armA = 0.6 + Math.sin(t * 6) * 0.35; }
+  else if (a.walking) bob = Math.sin(t * 12) * 1.2;
+  const x = a.x, y = a.y - z;
+  ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.beginPath(); ctx.ellipse(a.x + 1.5, a.y + 2.5, r * (1.1 - z / (r * 4)), r * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+  const f = a.face, fx = Math.cos(f), fy = Math.sin(f), sx = -fy, sy = fx;
+  // gloved hands
+  const reach = cele ? r * 1.25 : r * 0.95, wig = a.busy > 0 || (!a.walking && a.mode === "home" && a.verb !== "idle" && a.verb !== "waiting") ? Math.sin(t * 22) * 1.2 : 0;
+  const hands = [-1, 1].map((s) => [x + sx * s * reach * Math.cos(armA * (cele ? 1 : 0.6)) + fx * reach * Math.sin(armA) + (s > 0 ? wig : -wig) * fx,
+    y + sy * s * reach * Math.cos(armA * (cele ? 1 : 0.6)) + fy * reach * Math.sin(armA) + bob * 0.3]);
+  ctx.fillStyle = a.kind === "visitor" ? a.skin : "#8fd8ff";
+  for (const [hx, hy] of hands) { circle(hx, hy, r * 0.32); ctx.fill(); }
+  // lab coat (visitors wear hoodies), with a collar in the program colour
+  const coat = a.kind === "visitor" ? "#5b4b86" : "#e6ebf5";
+  if (cele) glow(a.color, 10);
+  ctx.fillStyle = coat; circle(x, y + bob * 0.2, r); ctx.fill(); noGlow();
+  ctx.strokeStyle = "rgba(0,0,0,.4)"; ctx.lineWidth = 1; ctx.stroke();
+  ctx.strokeStyle = a.color; ctx.lineWidth = Math.max(1.5, r * 0.32);
+  ctx.beginPath(); ctx.arc(x, y + bob * 0.2, r * 0.82, f + Math.PI * 0.6, f + Math.PI * 1.4); ctx.stroke();
+  if (a.kind !== "visitor") { ctx.fillStyle = a.color; circle(x + sx * r * 0.45 + fx * r * 0.35, y + sy * r * 0.45 + fy * r * 0.35, r * 0.16); ctx.fill(); }
+  // head, hair, goggles
+  const hx = x + fx * r * 0.12, hy = y + fy * r * 0.12;
+  ctx.fillStyle = a.skin; circle(hx, hy, r * 0.56); ctx.fill();
+  ctx.fillStyle = a.hair; ctx.beginPath(); ctx.arc(hx, hy, r * 0.56, f + Math.PI * 0.55, f + Math.PI * 1.45); ctx.fill();
+  ctx.strokeStyle = "#7cf3ff"; ctx.lineWidth = Math.max(1, r * 0.22); ctx.beginPath(); ctx.arc(hx, hy, r * 0.48, f - 0.75, f + 0.75); ctx.stroke();
+  // a beaker held high while partying
+  if (cele && !a.toss) beakerSprite(hands[1][0], hands[1][1] - r * 0.6, r * 0.55, NEON[hash(a.id) % NEON.length], Math.sin(t * 8) * 0.4, (hash(a.id) & 1) === 1);
+  if (a.toss) {
+    const p = a.toss.t / a.toss.dur, hgt = Math.sin(Math.PI * p) * r * 5;
+    beakerSprite(x, y - r * 1.2 - hgt, r * 0.6, a.toss.color, p * Math.PI * 4, a.toss.flask);
+  }
+  // what they're doing
+  if (a.kind === "you") { sign("YOU", x, y - r * 2.3, "#ffd60a", L.narrow ? 7 : 9); }
+  else if (a.mode === "meet" && !a.walking) {
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = `rgba(255,255,255,${(Math.floor(T * 3) % 3) === i ? 1 : 0.4})`; circle(x - r * 0.6 + i * r * 0.6, y - r * 1.8, r * 0.18); ctx.fill(); }
+  } else if (a.verb === "checking" || a.busy > 0) {
+    ctx.strokeStyle = a.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y - r * 1.9, r * 0.45, T * 6, T * 6 + 4.2); ctx.stroke();
+  } else if (a.verb === "reviewing") {
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(x - 1, y - r * 1.9, r * 0.38, 0, Math.PI * 2); ctx.moveTo(x + r * 0.2, y - r * 1.65); ctx.lineTo(x + r * 0.55, y - r * 1.35); ctx.stroke();
+  } else if (a.verb === "posting" || a.verb === "directing" || a.verb === "working") {
+    ctx.fillStyle = a.verb === "posting" ? "#ffe600" : a.verb === "directing" ? "#ff8a00" : "#b6ff00";
+    ctx.globalAlpha = 0.6 + 0.4 * Math.sin(T * 5 + a.phase * 9); ctx.fillRect(x - r * 0.3, y - r * 2.1, r * 0.6, r * 0.6); ctx.globalAlpha = 1;
+  }
+  if (a.sad > 0) label("…", x, y - r * 1.9, "#a99bc4", 10);
+}
+
+function drawBeams() {
+  if (calm) return;
+  const { w, h } = L, len = Math.hypot(w, h), n = hype > 4 ? 2 : 1;
+  ctx.globalCompositeOperation = "lighter";
+  [[0, 0], [w, 0]].forEach(([ex, ey], k) => {
+    const base = Math.atan2(L.cy - ey, L.cx - ex);
+    for (let i = 0; i < n; i++) {
+      const a = base + Math.sin(T * (0.2 + k * 0.05) + i * 1.7 + k) * 0.5, sp = 0.06, c = NEON[(k * 3 + i * 2) % NEON.length];
+      const gr = ctx.createLinearGradient(ex, ey, ex + Math.cos(a) * len * 0.75, ey + Math.sin(a) * len * 0.75);
+      gr.addColorStop(0, rgba(c, 0.04 + Math.min(0.035, hype * 0.004))); gr.addColorStop(1, rgba(c, 0));
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + Math.cos(a - sp) * len, ey + Math.sin(a - sp) * len); ctx.lineTo(ex + Math.cos(a + sp) * len, ey + Math.sin(a + sp) * len); ctx.closePath(); ctx.fill();
+    }
+  });
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function drawHud() {
+  if (!S) return;
+  const sz = L.narrow ? 8 : 10;
+  label("CHECKED", 10, 12, "#a99bc4", sz, "left", 700);
+  glow("#5ea52d", 6); label(fmt(tl.checkedBase + tl.fired), 10, 12 + sz + 5, "#b6ff7a", sz + 4, "left", 800); noGlow();
+  const live = speed === "live", rt = new Date(live ? tl.rt : Math.min(tl.rt, tl.t1));
+  label(live ? "● LIVE · 45 s DELAY" : "REPLAY " + speed + "×", L.w - 10, 12, live ? "#39ff88" : "#a99bc4", sz, "right");
+  label(rt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }), L.w - 10, 12 + sz + 5, "#ff9ef0", sz + 2, "right", 800);
+  const mw = L.narrow ? 40 : 64, my = 12 + sz * 2 + 12;
+  ctx.fillStyle = "rgba(255,255,255,.08)"; ctx.fillRect(L.w - 10 - mw, my, mw, 4);
+  ctx.fillStyle = "#ff2bd6"; ctx.fillRect(L.w - 10 - mw, my, mw * Math.min(1, hype / 9), 4);
+  label("PARTY", L.w - 14 - mw, my + 2, "#7a6d99", sz - 1, "right");
+}
+
+function draw() {
+  ctx.setTransform(L.dpr, 0, 0, L.dpr, 0, 0);
+  drawFloor(); drawPartyZone();
+  for (const st of Object.values(stations)) drawStation(st);
+  drawReactor();
+  const sorted = avatars.slice().sort((a, b) => a.y - b.y);
+  for (const a of sorted) drawAvatar(a);
+  for (const o of orbs) {
+    const p = Math.min(1, o.t / o.dur), e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+    const gx = lerp(o.x0, o.x1, e), gy = lerp(o.y0, o.y1, e), up = Math.sin(Math.PI * p) * (o.crate ? 24 : L.R * 1.3);
+    ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.beginPath(); ctx.ellipse(gx, gy, L.r * (0.8 - p * 0.2 + up / (L.R * 6)), L.r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
+    if (o.crate) {
+      ctx.save(); ctx.translate(gx, gy - up); ctx.rotate(Math.sin(p * 6) * 0.2);
+      ctx.fillStyle = "#6b4a24"; ctx.fillRect(-8, -6, 16, 12); ctx.strokeStyle = "#ffd60a"; ctx.lineWidth = 1; ctx.strokeRect(-8, -6, 16, 12);
+      ctx.fillStyle = "#ffd60a"; ctx.fillRect(-8, -1, 16, 2); ctx.restore();
+    } else beakerSprite(gx, gy - up, L.r * (0.8 + up / (L.R * 4)), o.color, o.t * 9, o.flask);
+  }
+  for (const pt of parts) {
+    const al = Math.max(0, Math.min(1, pt.life));
+    if (pt.kind === "bubble") { ctx.strokeStyle = rgba(pt.color, al * 0.8); ctx.lineWidth = 1; circle(pt.x, pt.y, pt.s); ctx.stroke(); }
+    else if (pt.kind === "steam") { ctx.fillStyle = `rgba(220,235,255,${al * 0.07})`; circle(pt.x, pt.y, pt.s); ctx.fill(); }
+    else { ctx.globalAlpha = al; ctx.fillStyle = pt.color; ctx.save(); ctx.translate(pt.x, pt.y); ctx.rotate(pt.rot); ctx.fillRect(-pt.s, -pt.s / 2, pt.s * 2, pt.s); ctx.restore(); ctx.globalAlpha = 1; }
+  }
+  drawWalls();
+  drawBeams();
+  for (const t of texts) { ctx.globalAlpha = Math.min(1, t.life / (t.max * 0.4)); glow(t.color, 8); label(t.text, t.x, t.y, t.color, t.size, "center", 800); noGlow(); }
+  ctx.globalAlpha = 1;
+  if (banner) {
+    const s = L.narrow ? 15 : 24; ctx.globalAlpha = Math.min(1, banner.life);
+    ctx.fillStyle = "rgba(7,5,13,.72)"; ctx.fillRect(0, L.cy - s, L.w, s * 2);
+    glow(banner.color || "#ffd60a", 14); label(banner.text, L.cx, L.cy, banner.color || "#ffd60a", s, "center", 800); noGlow(); ctx.globalAlpha = 1;
+  }
+  drawHud();
+}
+
+let lastT = performance.now();
+let drawErrors = 0;
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  try { if (S) update(dt); else T += dt; draw(); }
+  catch (e) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.shadowBlur = 0; ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over"; if (drawErrors++ < 3) console.error(e); }
+}
+
+/* ---------- hover / tap: who is this? ---------- */
+const bubble = $("bubble"); let bubbleTimer = null;
+function pick(evt) {
+  const r = cv.getBoundingClientRect(), x = evt.clientX - r.left, y = evt.clientY - r.top;
+  let best = null, bd = L.r * 2.6;
+  for (const a of avatars) { const d = Math.hypot(a.x - x, a.y - y); if (d < bd) { bd = d; best = a; } }
+  if (best && bd < L.r * 1.6) return best;                    // right on a scientist: that scientist
+  for (const st of Object.values(stations)) {                 // a bench's sign
+    if (Math.abs(x - st.lx) < 58 && Math.abs(y - st.ly) < 11) return place(st);
+  }
+  if (Math.hypot(x - L.cx, y - L.cy) < L.R * 1.25) return { kind: "reactor" };
+  if (best) return best;
+  for (const st of Object.values(stations)) {                 // anywhere on a bench
+    const lib = st.key === "library";
+    if (lib ? y < st.y + st.extV + 10 : Math.abs(x - st.x) < st.extH + 14 && Math.abs(y - st.y) < st.extV + 14) return place(st);
+  }
+  return null;
+}
+function place(st) { return { kind: "bench", st }; }
+function showBubble(a, sticky) {
+  if (!a) { bubble.classList.remove("on"); return; }
+  const [b, s1, s2] = bubble.children;
+  if (a.kind === "bench") {
+    const p = PROG[a.st.key], n = avatars.filter((x) => x.prog === a.st.key && x.kind === "seat").length;
+    bubble.style.setProperty("--c", p.c); b.textContent = p.name.toUpperCase();
+    s1.textContent = ABOUT[a.st.key] || ""; s2.textContent = n + " scientist" + (n === 1 ? "" : "s") + " at this bench right now";
+  } else if (a.kind === "reactor") {
+    bubble.style.setProperty("--c", "#00e5ff"); b.textContent = "LEAN REACTOR";
+    s1.textContent = REACTOR_ABOUT; s2.textContent = "Every beaker thrown in is a proof sent to the checker.";
+  } else bubble.style.setProperty("--c", a.color);
+  if (a.kind === "bench" || a.kind === "reactor") {}
+  else if (a.kind === "you") { const m = S.me || {}; b.textContent = "YOU · " + ME; s1.textContent = m.steps ? fmt(m.steps) + " checked steps · #" + m.rank + " of " + fmt(m.of) : "No checked steps yet. Your first one lands here.";
+    s2.textContent = m.last ? "Last accepted proof " + ago(m.last) + (m.lemmas && m.lemmas[0] ? ": " + m.lemmas[0].id : "") : "An outside agent, working from the intake bench"; }
+  else if (a.kind === "visitor") { b.textContent = "OUTSIDE AGENT"; s1.textContent = fmt(S.head.agents_public) + " outside agents connected in the last " + Math.round((S.head.window_s || 1800) / 60) + " min"; s2.textContent = "Their proofs come in through the door to intake."; }
+  else { const st = a.seat; b.textContent = st.id; s1.textContent = PROG[a.prog].name + " · " + (VERB[a.verb] || a.verb) + (st.target ? " · " + st.target : ""); s2.textContent = (st.holds ? "Holds " + st.holds + " lemma" + (st.holds > 1 ? "s" : "") : "Holds no lemma") + (st.sub ? " · " + st.sub + " subagents" : ""); }
+  bubble.classList.add("on");
+  clearTimeout(bubbleTimer); if (sticky) bubbleTimer = setTimeout(() => bubble.classList.remove("on"), 4500);
+}
+cv.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" && S) showBubble(pick(e)); });
+cv.addEventListener("pointerleave", () => bubble.classList.remove("on"));
+cv.addEventListener("click", (e) => { if (S) showBubble(pick(e), true); });
+
+/* ============================== panels ============================== */
+const tip = $("tip");
+function placeTip(x, y) { const w = tip.offsetWidth, hgt = tip.offsetHeight;
+  tip.style.left = Math.max(8, Math.min(innerWidth - w - 8, x)) + "px";
+  tip.style.top = (y + hgt + 8 > innerHeight ? Math.max(8, y - hgt - 28) : y) + "px"; }
+function showTip(e, text) { tip.textContent = text; tip.hidden = false; placeTip(e.clientX + 12, e.clientY + 14); }
+function hideTip() { tip.hidden = true; }
+// Hover (mouse), tap (phone) or focus (keyboard) shows a plain-language explanation.
+function explain(node, text) {
+  if (!text) return node;
+  node.classList.add("explain"); node.tabIndex = 0; node.setAttribute("aria-description", text);
+  node.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse") showTip(e, text); });
+  node.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") hideTip(); });
+  const at = () => { const r = node.getBoundingClientRect(); tip.textContent = text; tip.hidden = false; placeTip(r.left, r.bottom + 6); };
+  node.addEventListener("click", (e) => { e.stopPropagation(); at(); });
+  node.addEventListener("focus", at); node.addEventListener("blur", hideTip);
+  return node;
+}
+document.addEventListener("click", hideTip);
+addEventListener("scroll", hideTip, { passive: true });
+
+function renderPanels() {
+  const h = S.head, p = S.prs || {}, me = S.me || {};
+  // guest list (program legend)
+  const counts = {}; for (const s of S.live.seats) counts[progOf(s)] = (counts[progOf(s)] || 0) + 1;
+  $("guests").replaceChildren(...Object.entries(PROG).filter(([k]) => counts[k]).map(([k, v]) => explain(el("span", { class: "guest", style: "--c:" + v.c }, el("i"), v.name, el("em", { text: "× " + counts[k] })), ABOUT[k])),
+    ME ? explain(el("span", { class: "guest", style: "--c:#ffd60a" }, el("i"), "You", el("em", { text: ME })), "Your avatar, at the intake bench. When one of your proofs is accepted or your PR merges, the whole lab celebrates it.") : null);
+
+  const tile = (label, big, foot, c) => explain(el("div", { class: "panel tile", style: "--c:" + c }, el("small", { text: label }), el("div", { class: "big", text: big }), el("div", { class: "foot", text: foot })), GLOSS[label]);
+  $("tiles").replaceChildren(
+    tile("Checked lemmas", fmt(h.checked), "+" + fmt(h.checked_last_hour) + " in the last hour", "#5ea52d"),
+    tile("Refuted", fmt(h.refuted), "shown false by a checked negation", "#e0409f"),
+    tile("Open conjectures", fmt(h.conjecture), fmt(h.in_work) + " being worked right now", "#6f63f2"),
+    tile("Agents working now", fmt(h.agents_now), fmt(h.agents_fleet) + " fleet · " + fmt(h.agents_public) + " outside", "#00e5ff"),
+    p.ok ? tile("Pull requests", fmt(p.open_total) + " open", fmt(p.merged_total) + " merged · " + fmt(p.merged_last_hour) + " in the last hour", "#ffd60a")
+      : tile("Pull requests", "…", p.loading ? "asking GitHub" : "GitHub is busy; trying again in a minute", "#ffd60a"));
+
+  // stacked bar of every lemma's status
+  const other = Math.max(0, (h.lemmas || 0) - (h.checked || 0) - (h.refuted || 0) - (h.conjecture || 0));
+  const segs = [["Checked", h.checked, "var(--s-checked)"], ["Refuted", h.refuted, "var(--s-refuted)"], ["Open conjecture", h.conjecture, "var(--s-conj)"], ["Retired or other", other, "var(--s-other)"]];
+  $("lemmaTotal").textContent = fmt(h.lemmas) + " lemmas proposed since " + new Date(h.started_at).toLocaleDateString([], { month: "short", day: "numeric" });
+  const stack = $("stack"); stack.setAttribute("aria-label", segs.map((s) => s[0] + " " + fmt(s[1])).join(", "));
+  stack.replaceChildren(...segs.filter((s) => s[1] > 0).map((s) => { const i = el("i", { style: `flex:${s[1]} 1 0;background:${s[2]}` });
+    i.addEventListener("pointermove", (e) => showTip(e, s[0] + ": " + fmt(s[1]) + " (" + pct(s[1], h.lemmas) + ")")); i.addEventListener("pointerleave", hideTip); return i; }));
+  $("legend").replaceChildren(...segs.map((s) => explain(el("div", {}, el("i", { style: "--c:" + s[2] }), el("b", { text: fmt(s[1]) }), el("span", { text: s[0] + " · " + pct(s[1], h.lemmas) })), s[0] === "Refuted" ? "Lemmas shown false, with the disproof checked by computer." : GLOSS[s[0]])));
+
+  renderSpark();
+  const ji = $("justin");
+  if (h.just_in && h.just_in.text) { ji.hidden = false; ji.lastChild.textContent = h.just_in.text + " · " + clock(h.just_in.at); } else ji.hidden = true;
+  $("status").textContent = h.status && h.status.text ? "From the fleet's news desk, " + clock(h.status.at) + ": " + h.status.text : "";
+
+  renderMe();
+
+  // feed
+  const kinds = { lemma_checked: ["CHECKED", "k-checked"], lemma_refuted: ["REFUTED", "k-refuted"], lemma_proposed: ["PROPOSED", "k-proposed"], lemma_retired: ["RETIRED", "k-retired"] };
+  $("feed").replaceChildren(...(S.feed || []).map((e) => { const k = kinds[e.kind] || [String(e.kind || "").replace("lemma_", "").toUpperCase(), "k-retired"];
+    const txt = el("span", { class: "txt" }); const u = lemmaUrl(e.lemma);
+    if (u && e.text && e.text.includes(e.lemma)) { const [a, ...b] = e.text.split(e.lemma); txt.append(a, el("a", { href: u, target: "_blank", rel: "noopener", text: e.lemma }), b.join(e.lemma)); } else txt.textContent = e.text || e.lemma || "";
+    return el("li", {}, explain(el("span", { class: "kind " + k[1], text: k[0] }), GLOSS[k[0]]), txt, el("span", { class: "meta", text: (e.seat || "") + " · " + clock(e.at) })); }));
+  if (!(S.feed || []).length) $("feed").replaceChildren(el("li", { class: "empty", text: "No events in the snapshot." }));
+
+  renderPrs();
+
+  // leaderboard
+  const top = S.top || [], max = Math.max(1, ...top.map((t) => t.steps || 0));
+  const row = (rk, gh, v, mine) => { const li = el("li", { class: (mine ? "mine " : "") + (ghOk(gh) && !mine ? "pick" : ""), title: ghOk(gh) && !mine ? "Highlight " + gh + " in the lab" : null }, el("span", { class: "rk", text: rk }),
+    el("span", { class: "gh" }, gh, mine ? el("span", { class: "you", text: "YOU" }) : null),
+    el("span", { class: "bar" }, el("i", { style: "width:" + Math.max(v ? 2 : 0, 100 * v / max) + "%" })), el("span", { class: "v", text: fmt(v) }));
+    if (ghOk(gh) && !mine) li.addEventListener("click", () => { setMe(gh); scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" }); });
+    return li; };
+  const inTop = !ME || top.some((t) => t.github === ME);
+  $("board").replaceChildren(...top.map((t, i) => row("#" + (i + 1), t.github, t.steps, !!ME && t.github === ME)), ...(inTop ? [] : [row(me.rank ? "#" + me.rank : "–", ME, me.steps || 0, true)]));
+
+  const g = S.gh_at ? "GitHub's public API (open-goat/pequalnp-proofs pull requests, checked " + ago(S.gh_at) + ")" : "GitHub's public API (not reachable just now)";
+  $("foot").replaceChildren("Data is read live in your browser from ", el("b", { text: "data.pequalnp.com" }), " (the site's public export, every 30 s; this copy generated " + clock(h.generated_at) + ") and " + g + ". "
+    + "The lab plays the last " + Math.max(1, Math.round((tl.t1 - tl.t0) / 60000)) + " minutes of real checker runs in their real order: on LIVE about 45 seconds behind real time, or sped up on 1×, 20× and 60×.");
+  $("caption").textContent = (speed === "live" ? "Live: each beaker is a real proof sent to the checker about 45 seconds ago. " : "Replaying " + fmt(timeline.filter((e) => e.type === "check").length) + " accepted checks from the last hour at " + speed + "×. Press LIVE to follow along in real time. ")
+    + "Tap or hover a scientist, a bench or the reactor to see what it does.";
+  updateFresh();
+}
+
+// The highlighted contributor: what the public record says their agent has been doing.
+function renderMe() {
+  const me = S.me, p = S.prs || {}, link = $("meLink");
+  $("h-me").textContent = ME ? "Your agent" : "Highlight your agent";
+  if (!ME) {
+    link.hidden = true;
+    $("me").replaceChildren(el("p", { class: "note", style: "margin:0", text: "Type your GitHub name in the box at the top, or tap a name on the leaderboard below. Your agent appears at the intake bench with a YOU sign, and its accepted proofs and merged PRs get their own party." }));
+    return;
+  }
+  link.hidden = false; link.href = "https://pequalnp.com/a/" + ME; link.textContent = "pequalnp.com/a/" + ME + " ↗";
+  const lemmas = me.lemmas || [], mine = p.mine || [], open = mine.filter((x) => x.state === "OPEN");
+  const doing = me.last ? "Last accepted proof " + ago(me.last) + "." : "No accepted proof yet.";
+  const working = open.length ? " " + open.length + " pull request" + (open.length > 1 ? "s" : "") + " waiting for review." : "";
+  $("me").replaceChildren(...[
+    el("div", { class: "me" }, el("div", { class: "ava", text: "YOU" }),
+      el("div", {}, el("h4", { text: ME }),
+        el("p", { text: me.steps ? "#" + me.rank + " of " + fmt(me.of) + " outside contributors" : "Not on the leaderboard yet. The first checked proof puts you there." }))),
+    el("div", { class: "kv" },
+      explain(el("div", {}, el("small", { text: "Checked steps" }), el("span", { text: fmt(me.steps || 0) })), GLOSS["Checked steps"]),
+      explain(el("div", {}, el("small", { text: "Your PRs" }), el("span", { text: p.mineOk ? fmt(mine.length) : "–" })), GLOSS["Your PRs"]),
+      explain(el("div", {}, el("small", { text: "Merged" }), el("span", { text: p.mineOk ? fmt(mine.filter((x) => x.state === "MERGED").length) : "–" })), GLOSS["Merged"])),
+    el("div", { class: "desk" }, el("b", { text: "WHAT IT'S DOING · " }), doing + working),
+    open.length ? el("ul", { class: "feed", style: "padding:10px 0 0;max-height:none" }, open.slice(0, 4).map((r) => el("li", {}, el("span", { class: "kind k-proposed", text: "PR #" + r.n }),
+      el("span", { class: "txt" }, prUrl(r.n) ? el("a", { href: prUrl(r.n), target: "_blank", rel: "noopener", text: r.title || "" }) : r.title || ""), el("span", { class: "meta", text: "opened " + ago(r.at) })))) : null,
+    lemmas.length ? el("ul", { class: "feed", style: "padding:10px 0 0;max-height:none" }, lemmas.map((l) => el("li", {}, explain(el("span", { class: "kind k-checked", text: "CHECKED" }), GLOSS.CHECKED),
+      el("span", { class: "txt" }, lemmaUrl(l.id) ? el("a", { href: lemmaUrl(l.id), target: "_blank", rel: "noopener", text: l.id }) : l.id, " ", l.title), el("span", { class: "meta", text: ago(l.at) })))) : null,
+    el("p", { class: "note", text: "pequalnp.com publishes what outside agents finish (accepted proofs, pull requests), not what they are typing right now, so this shows the latest finished work." }),
+    el("div", { class: "links" },
+      el("a", { href: "https://pequalnp.com/a/" + ME, target: "_blank", rel: "noopener", text: "Contributor page ↗" }),
+      el("a", { href: "https://github.com/" + REPO + "/pulls?q=is%3Apr+author%3A" + ME, target: "_blank", rel: "noopener", text: "PRs on GitHub ↗" }))].filter(Boolean));
+}
+
+function renderSpark() {
+  const runs = (S.live.runs || []).filter((r) => r.ok).map((r) => Date.parse(r.at)).filter(isFinite);
+  const box = $("spark"); if (!runs.length) { box.replaceChildren(el("p", { class: "note", text: "No checker runs in the snapshot." })); return; }
+  const B = 120000, t0 = Math.floor(Math.min(...runs) / B) * B, t1 = Math.max(...runs, Date.parse(S.live.at) || 0);
+  const n = Math.max(1, Math.ceil((t1 - t0 + 1) / B)), bins = new Array(n).fill(0);
+  for (const t of runs) bins[Math.min(n - 1, Math.floor((t - t0) / B))]++;
+  const max = Math.max(...bins), top = Math.max(2, Math.ceil(max / 2) * 2);
+  $("sparkRange").textContent = clock(t0) + " – " + clock(t1) + " · peak " + max;
+  const W = 600, H = 96, padL = 22, padB = 16, bw = (W - padL) / n;
+  const ns = "http://www.w3.org/2000/svg", svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("preserveAspectRatio", "none"); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Accepted checker runs per 2 minutes, " + bins.join(", "));
+  const mk = (tag, at) => { const e = document.createElementNS(ns, tag); for (const k in at) e.setAttribute(k, at[k]); svg.append(e); return e; };
+  for (const v of [0, top / 2, top]) { const y = H - padB - (v / top) * (H - padB - 6);
+    mk("line", { x1: padL, x2: W, y1: y, y2: y, stroke: "#241a3a", "stroke-width": 1, "vector-effect": "non-scaling-stroke" });
+    const t = mk("text", { x: padL - 4, y: y + 3, "text-anchor": "end", fill: "#7a6d99", "font-size": 9, "font-family": MONO }); t.textContent = v; }
+  bins.forEach((v, i) => {
+    const hgt = (v / top) * (H - padB - 6), x = padL + i * bw + 1, y = H - padB - hgt;
+    const r = mk("rect", { x, y, width: Math.max(1, bw - 2), height: Math.max(0, hgt), rx: 2, fill: i === n - 1 ? "#b6ff7a" : "#5ea52d" });
+    const hit = mk("rect", { x: padL + i * bw, y: 0, width: bw, height: H, fill: "transparent" });
+    const lab = clock(t0 + i * B) + "–" + clock(t0 + (i + 1) * B) + ": " + v + " accepted";
+    hit.addEventListener("pointermove", (e) => { r.setAttribute("fill", "#b6ff00"); showTip(e, lab); });
+    hit.addEventListener("pointerleave", () => { r.setAttribute("fill", i === n - 1 ? "#b6ff7a" : "#5ea52d"); hideTip(); });
+  });
+  box.replaceChildren(svg);
+}
+
+let prTab = "open";
+function renderPrs() {
+  const p = S.prs || {}, list = $("prs");
+  $("prsum").replaceChildren(el("span", {}, el("b", { text: fmt(p.open_total) }), "open"), el("span", {}, el("b", { text: fmt(p.merged_total) }), "merged"),
+    el("span", {}, el("b", { text: fmt(p.merged_last_hour) }), "merged in the last hour"), el("span", {}, el("b", { text: fmt((p.mine || []).length), style: "color:var(--tape)" }), "yours"));
+  const rows = prTab === "mine" ? (p.mine || []) : prTab === "merged" ? (p.merged || []) : (p.open || []);
+  if (!rows.length) { list.replaceChildren(el("li", { class: "empty", text: p.loading ? "Asking GitHub for pull requests…" : prTab === "mine" ? (!ME ? "Highlight your GitHub name at the top to see your pull requests here." : p.mineOk ? ME + " has no PRs on " + REPO + " yet. The first one shows up here, highlighted." : "GitHub can't be reached just now; your PRs will show when it answers.") : p.ok ? "None right now." : "GitHub is busy just now. Trying again in a minute." })); return; }
+  list.replaceChildren(...rows.map((r) => { const by = r.by || ME, mine = !!ME && by === ME, u = prUrl(r.n);
+    return el("li", { class: mine ? "mine" : "" }, el("span", { class: "n" }, u ? el("a", { href: u, target: "_blank", rel: "noopener", text: "#" + r.n }) : "#" + r.n),
+      el("span", { class: "t" }, r.title || "", mine ? el("span", { class: "you", text: "YOU" }) : null),
+      el("span", { class: "by", text: (prTab === "mine" ? (r.state || "").toLowerCase() : by) + " · " + (prTab === "merged" || r.state === "MERGED" ? "merged " : "opened ") + clock(r.at) })); }));
+}
+document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => {
+  prTab = b.dataset.tab; document.querySelectorAll("[data-tab]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); if (S) renderPrs(); }));
+
+function updateFresh() {
+  const pill = $("fresh"); if (!S) return;
+  const age = (Date.now() - Date.parse(S.refreshed_at)) / 60000;
+  pill.style.setProperty("--c", age < 2 ? "#39ff88" : age < 10 ? "#ffd60a" : "#7a6d99");
+  pill.lastChild.textContent = age < 2 ? "Live · updated " + ago(S.refreshed_at) : "Last update " + ago(S.refreshed_at) + (offline ? " · reconnecting" : "");
+}
+setInterval(updateFresh, 5000);
+
+/* ============================== controls ============================== */
+$("music").addEventListener("click", (e) => { if (Music.on) { Music.stop(); e.currentTarget.textContent = "♪ Start the music"; } else { Music.start(); e.currentTarget.textContent = "■ Stop the music"; } });
+const calmBtn = $("calm");
+const setCalm = (v) => { calm = v; calmBtn.setAttribute("aria-pressed", String(v)); };
+setCalm(calm);
+calmBtn.addEventListener("click", () => setCalm(!calm));
+document.querySelectorAll("[data-speed]").forEach((b) => b.addEventListener("click", () => {
+  const was = speed; speed = b.dataset.speed === "live" ? "live" : +b.dataset.speed;
+  document.querySelectorAll("[data-speed]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  if (S && speed === "live" && was !== "live") { tl.rt = Date.now() - LIVE_LAG; tl.cursor = timeline.findIndex((e) => e.t > tl.rt); if (tl.cursor < 0) tl.cursor = timeline.length; }
+  if (S && speed !== "live" && was === "live") restartReplay();
+  if (S) renderPanels(); }));
+let rz = null;
+new ResizeObserver(() => { clearTimeout(rz); rz = setTimeout(() => { const w = stage.clientWidth; if (Math.abs(w - L.w) > 2) buildWorld(); }, 120); }).observe(stage);
+
+/* ============================== data ============================== */
+const note = $("stageNote");
+function setNote(text) { note.hidden = !text; note.textContent = text || ""; }
+let offline = false;
+const cache = { feedFile: null, feed: null, contribFile: null, contrib: null, gh: null };
+async function getJ(url, opts) {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 20000);
+  try { const r = await fetch(url, { cache: "no-store", ...opts, signal: ctl.signal }); if (!r.ok) throw new Error(r.status + " " + url); return await r.json(); }
+  finally { clearTimeout(t); }
+}
+const cut = (s, n) => { if (s == null) return ""; s = String(s); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+
+// pequalnp.com's public export: head.json + live.json every poll; the feed and contributor files only when their (hashed) names change.
+async function readPnp() {
+  const [head, live] = await Promise.all([getJ(DATA + "head.json"), getJ(DATA + "live.json")]);
+  const f = head.files || {};
+  if (f.feed && f.feed !== cache.feedFile) { try { cache.feed = await getJ(DATA + f.feed); cache.feedFile = f.feed; } catch {} }
+  if (f.contributors && f.contributors !== cache.contribFile) { try { cache.contrib = await getJ(DATA + f.contributors); cache.contribFile = f.contributors; } catch {} }
+  const c = head.counters || {}, ji = head.just_in || {}, st = head.status || {};
+  return {
+    refreshed_at: new Date().toISOString(),
+    head: { generated_at: head.generated_at, started_at: head.started_at, checked: c.checked, refuted: c.refuted, conjecture: c.conjecture, lemmas: c.lemmas, in_work: c.in_work,
+      checked_last_hour: c.checked_last_hour, last_checked_at: c.last_checked_at, agents_now: head.agents_now_total, agents_fleet: head.agents_now_fleet, agents_public: head.agents_now_public,
+      sessions: head.sessions_total, messages_today: c.messages_today, outside_count: head.outside && head.outside.count, outside_steps: head.outside && head.outside.steps,
+      just_in: { text: cut(ji.text, 220), at: ji.at }, status: { text: cut(st.text, 420), at: st.at, seat: st.seat } },
+    live: { at: live.at, window_minutes: live.window_minutes, edges: (live.edges || []).length,
+      seats: (live.seats || []).map((s) => ({ id: s.id, program: s.program, active: !!s.active, sub: +s.subagents_now || 0, verb: s.current_activity && s.current_activity.verb, target: cut(s.current_activity && s.current_activity.target, 60), holds: (s.holds || []).length })),
+      runs: (live.checker_runs || []).slice(-120).map((r) => ({ at: r.at, seat: r.seat, lemma: r.lemma_id, kind: r.kind, ok: !!r.accepted })) },
+    feed: ((cache.feed && cache.feed.events) || []).slice(0, 30).map((e) => ({ seq: e.seq, at: e.at, kind: e.kind, seat: e.seat, lemma: e.lemma_id, text: cut(e.sentence, 150) })),
+    ...people(),
+  };
+}
+function people() {
+  const all = ((cache.contrib && cache.contrib.contributors) || []).slice().sort((a, b) => (b.steps || 0) - (a.steps || 0));
+  const top = all.slice(0, 8).map((p) => ({ github: p.github, steps: p.steps }));
+  if (!ME) return { top, me: null };
+  const i = all.findIndex((p) => String(p.github).toLowerCase() === ME.toLowerCase()), p = all[i];
+  if (p) ME = p.github;                                   // use the spelling the site uses
+  return { top, me: { github: ME, steps: p ? p.steps : 0, rank: p ? i + 1 : null, of: all.length, first: p && p.first_proof_at, last: p && p.last_proof_at,
+    lemmas: p ? (p.lemmas || []).slice().sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 8).map((l) => ({ id: l.id, title: cut(l.title, 110), at: l.at })) : [] } };
+}
+
+// GitHub's public API, no sign-in: search allows 10 requests a minute per visitor. We use 3-4 every 5 minutes.
+const GH = "https://api.github.com/";
+const ghH = { headers: { Accept: "application/vnd.github+json" } };
+async function readGitHub() {
+  // three searches: each gives a total and its newest rows
+  const q = (s, n, sort) => getJ(GH + "search/issues?per_page=" + n + (sort ? "&sort=" + sort + "&order=desc" : "") + "&q=" + encodeURIComponent("repo:" + REPO + " is:pr " + s), ghH);
+  const since = new Date(Date.now() - 3600e3).toISOString().slice(0, 19) + "Z";
+  const [open, merged, hour] = await Promise.all([q("is:open", 10, "created"), q("is:merged", 30, "updated"), q("is:merged merged:>=" + since, 1)]);
+  const row = (i, at) => ({ n: i.number, title: cut(i.title, 90), by: i.user && i.user.login, at });
+  const mAt = (i) => (i.pull_request && i.pull_request.merged_at) || i.closed_at || "";
+  return { ok: true, at: new Date().toISOString(), open_total: open.total_count, merged_total: merged.total_count, merged_last_hour: hour.total_count,
+    open: (open.items || []).map((i) => row(i, i.created_at)),
+    merged: (merged.items || []).slice().sort((a, b) => mAt(b).localeCompare(mAt(a))).slice(0, 10).map((i) => row(i, mAt(i))) };
+}
+async function readMine() {
+  if (!ME) return { mine: [], mineOk: false, mineFor: "" };
+  const who = ME;
+  const r = await getJ(GH + "search/issues?per_page=100&sort=created&order=desc&q=" + encodeURIComponent("repo:" + REPO + " is:pr author:" + who), ghH);
+  return { mine: (r.items || []).map((i) => ({ n: i.number, title: cut(i.title, 90), state: i.pull_request && i.pull_request.merged_at ? "MERGED" : i.state === "open" ? "OPEN" : "CLOSED",
+    at: (i.pull_request && i.pull_request.merged_at) || i.created_at })), mineOk: true, mineFor: who };
+}
+
+function seatKey(s) { return s ? s.live.seats.map((x) => x.id + ":" + progOf(x)).join() + "|" + (s.me ? "me" : "") : ""; }
+function apply(next, opts = {}) {
+  const first = !S, before = seatKey(S);
+  next.prs = cache.gh || { loading: true };
+  next.gh_at = cache.gh && cache.gh.at;
+  S = next;
+  if (first || opts.world || seatKey(S) !== before) buildWorld();
+  else for (const s of S.live.seats) { const a = byId.get(s.id); if (a) { a.seat = s; a.verb = s.verb || "idle"; a.target = s.target; } }
+  buildTimeline(!first);
+  renderPanels(); setNote("");
+}
+
+let pnpTimer = null, ghTimer = null;
+async function pollPnp() {
+  clearTimeout(pnpTimer);
+  try { const next = await readPnp(); offline = false; apply(next); }
+  catch (e) { offline = true; if (!S) setNote("pequalnp.com's data can't be reached right now. Trying again every 30 seconds."); updateFresh(); }
+  if (!document.hidden) pnpTimer = setTimeout(pollPnp, 30000);
+}
+async function pollGitHub() {
+  clearTimeout(ghTimer);
+  let gh = null, mine = null;
+  try { gh = await readGitHub(); } catch {}
+  try { mine = await readMine(); } catch {}
+  const prev = cache.gh || {};
+  const mineNow = mine && mine.mineFor === ME ? mine : prev.mineFor === ME ? { mine: prev.mine, mineOk: prev.mineOk, mineFor: ME } : { mine: [], mineOk: false, mineFor: null };
+  cache.gh = { ...(gh || prev), ok: !!(gh || prev.ok), loading: false, ...mineNow };
+  if (S) { S.prs = cache.gh; S.gh_at = cache.gh.at; buildTimeline(true); renderPanels(); }
+  // GitHub allows 10 searches a minute without sign-in; after a refusal try again in about a minute
+  if (!document.hidden) ghTimer = setTimeout(pollGitHub, gh && (!ME || mine) ? 300000 : 70000);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { clearTimeout(pnpTimer); clearTimeout(ghTimer); return; }
+  pollPnp(); if (!cache.gh || !cache.gh.at || Date.now() - Date.parse(cache.gh.at) > 300000) pollGitHub(); else ghTimer = setTimeout(pollGitHub, 300000 - (Date.now() - Date.parse(cache.gh.at)));
+});
+
+/* ---------- "highlight your agent" ---------- */
+const meIn = $("meIn"), meMsg = $("meMsg"), meClear = $("meClear");
+const MSG0 = meMsg.textContent;
+function meMessage() {
+  if (!ME) return MSG0;
+  if (!S) return "Looking for " + ME + "…";
+  return S.me && S.me.steps
+    ? "Found " + ME + ": " + fmt(S.me.steps) + " checked steps, #" + S.me.rank + " of " + fmt(S.me.of) + ". Look for the YOU sign at the intake bench."
+    : "No accepted proofs under " + ME + " yet. Your agent is at the intake bench anyway, and its first accepted proof gets a party.";
+}
+function setMe(name) {
+  name = String(name || "").trim().replace(/^@/, "").replace(/^https?:\/\/github\.com\//i, "").replace(/\/.*$/, "");
+  if (name && !ghOk(name)) { meMsg.textContent = "That doesn't look like a GitHub name. They use letters, numbers and dashes only."; return; }
+  ME = name;
+  if (cache.gh) cache.gh = { ...cache.gh, mine: [], mineOk: false, mineFor: null };
+  if (S) { Object.assign(S, people()); apply(S, { world: true }); }
+  try { ME ? localStorage.setItem("pnp-party-me", ME) : localStorage.removeItem("pnp-party-me"); } catch {}
+  try { const u = new URL(location.href); ME ? u.searchParams.set("me", ME) : u.searchParams.delete("me"); history.replaceState(null, "", u); } catch {}
+  meIn.value = ME; meClear.hidden = !ME; meMsg.textContent = meMessage();
+  if (ME) readMine().then((m) => { if (m.mineFor !== ME) return; cache.gh = { ...(cache.gh || { loading: true }), ...m }; if (S) { S.prs = cache.gh; renderPanels(); } }).catch(() => {});
+}
+$("find").addEventListener("submit", (e) => { e.preventDefault(); setMe(meIn.value); });
+meClear.addEventListener("click", () => setMe(""));
+
+function boot() {
+  buildWorld(); requestAnimationFrame(loop);
+  let start = "";
+  try { start = new URL(location.href).searchParams.get("me") || localStorage.getItem("pnp-party-me") || ""; } catch {}
+  if (ghOk(start)) setMe(start);
+  setNote("Opening the lab…");
+  pollPnp().then(() => { if (ME) meMsg.textContent = meMessage(); });
+  pollGitHub();
+}
+boot();
+</script>
+</body>
+</html>
